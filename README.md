@@ -94,10 +94,16 @@ Le moteur IA de `prompt-engine.js` embarque désormais une base de connaissances
 - `promptHeuristics`: grille qualité (objectif, contraintes, actionnabilité, tool-fit, ambiguïtés, etc.).
 - `antiVague`: dictionnaire de mots vagues (`pro`, `complet`, `intelligent`, etc.) vers critères concrets.
 - `codexBestPractices` / `soraBestPractices`: règles de génération orientées outil.
-- `questionStrategies`: modes `rapide`, `standard`, `expert`, `ultra` (volume/profondeur/temps estimé/enrichissement).
+- `questionStrategies`: modes `rapide`, `standard`, `expert`, `ultra`, `architecte` (diagnostic systémique + plus de questions critiques).
 - `promptPatterns`: patrons prêts à remplir pour branches Codex/Sora.
 - `improvementBoosters`: blocs d’amélioration automatiques proposés.
 - `examples`: exemples concrets intégrés (input brut → questions → extraction → prompt amélioré).
+
+### Améliorations IA récentes
+- Vocabulaire anti-flou enrichi (`fiable`, `scalable`, `sécurisé`, `premium`, `automatique`) pour convertir les demandes vagues en critères mesurables.
+- Nouveaux patterns Codex (`agent multi-outils`, `refactorisation test-first`) et Sora (`pub produit haut de gamme`, `documentaire immersif`).
+- Boosters supplémentaires pour robustesse réelle (rollback, sécurité, rythme de montage, transitions).
+- Exemples embarqués additionnels (agent IA local sécurisé et publicité produit premium).
 
 ### Utilisation interne (sans changement UI)
 1. `createDraft(description, { depthMode })` fait l’analyse initiale.
