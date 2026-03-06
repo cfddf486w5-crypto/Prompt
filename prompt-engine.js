@@ -8,7 +8,8 @@
     rapide: { questionLimit: 3, depth: "faible", userTimeMin: 1, enrichment: "faible" },
     standard: { questionLimit: 6, depth: "moyenne", userTimeMin: 3, enrichment: "moyen" },
     expert: { questionLimit: 10, depth: "haute", userTimeMin: 6, enrichment: "élevé" },
-    ultra: { questionLimit: 14, depth: "très haute", userTimeMin: 10, enrichment: "maximal" }
+    ultra: { questionLimit: 14, depth: "très haute", userTimeMin: 10, enrichment: "maximal" },
+    architecte: { questionLimit: 18, depth: "systémique", userTimeMin: 14, enrichment: "maximal+" }
   };
 
   const GENERATION_MODES = {
@@ -40,7 +41,12 @@
       intelligent: ["détection automatique", "suggestions contextuelles", "fallback", "recommandations", "résumé raisonné", "adaptation aux réponses précédentes"],
       rapide: ["temps de réponse défini", "zéro blocage", "latence minimale", "priorité au flux principal"],
       moderne: ["design system cohérent", "accessibilité de base", "typographie lisible", "contrastes conformes"],
-      puissant: ["gestion edge cases", "mécanismes de récupération", "scalabilité logique", "journalisation utile"]
+      puissant: ["gestion edge cases", "mécanismes de récupération", "scalabilité logique", "journalisation utile"],
+      fiable: ["gestion des erreurs explicite", "tests de non-régression", "timeouts et retries", "journal d'événements"],
+      scalable: ["limites de charge définies", "modularité horizontale", "budget perf", "plan d'évolution"],
+      "sécurisé": ["validation stricte des entrées", "permissions minimales", "journal d'audit", "anti-injection"],
+      premium: ["micro-interactions cohérentes", "message d'état explicite", "documentation claire", "finition UX"],
+      automatique: ["déclencheurs définis", "conditions de fallback", "journalisation", "reprise sur erreur"]
     },
     codexBestPractices: [
       "Préciser ce qui existe déjà.",
@@ -55,7 +61,11 @@
       "Préciser les critères de réussite.",
       "Demander un code propre, modulaire, maintenable.",
       "Demander de ne pas casser le style existant.",
-      "Demander un test logique final."
+      "Demander un test logique final.",
+      "Lister les hypothèses dans une section dédiée.",
+      "Toujours fournir une stratégie de rollback.",
+      "Inclure un plan de migration de données si nécessaire.",
+      "Distinguer quick-wins et améliorations structurelles."
     ],
     soraBestPractices: [
       "Décrire ambiance, lumière, météo, décor, textures.",
@@ -77,7 +87,9 @@
         "mobile-first": "Optimiser flux mobile puis desktop sans casser l'existant.",
         "multi-pages": "Structurer routes/pages tout en conservant architecture maintenable.",
         "intégration future API": "Préparer interfaces/facades pour API future sans dépendance réseau immédiate.",
-        "optimisation app existante": "Améliorer performance, robustesse, observabilité sans refonte UI."
+        "optimisation app existante": "Améliorer performance, robustesse, observabilité sans refonte UI.",
+        "agent multi-outils": "Créer un agent local orchestrant plusieurs modules avec garde-fous et journalisation.",
+        "refactorisation test-first": "Refactoriser par étapes pilotées par tests et critères de non-régression."
       },
       sora: {
         "scène unique cinéma": "Une scène cinématique continue avec progression émotionnelle.",
@@ -88,17 +100,21 @@
         "scène de danse": "Rythme, chorégraphie, plans synchronisés.",
         "plans drone": "Mouvements aériens stables, transitions panoramiques.",
         "rendu Hollywood": "Mise en scène premium, contraste maîtrisé, étalonnage cinéma.",
-        "paysage aléatoire ultra réaliste": "Générer paysage plausible avec détails micro-textures et profondeur atmosphérique."
+        "paysage aléatoire ultra réaliste": "Générer paysage plausible avec détails micro-textures et profondeur atmosphérique.",
+        "pub produit haut de gamme": "Mettre en valeur un produit avec éclairage premium, macro-détails, rythme publicitaire.",
+        "documentaire immersif": "Créer une scène documentaire crédible avec narration visuelle progressive."
       }
     },
     improvementBoosters: {
       codex: [
         "ajouter validations", "ajouter historique", "ajouter sauvegarde brouillon", "ajouter presets", "ajouter score qualité",
-        "ajouter variantes", "ajouter mode expert", "ajouter import/export projet", "ajouter README", "ajouter tests"
+        "ajouter variantes", "ajouter mode expert", "ajouter import/export projet", "ajouter README", "ajouter tests",
+        "ajouter mode architecte", "ajouter plan rollback", "ajouter garde-fous sécurité"
       ],
       sora: [
         "ajouter caméra cinématique", "ajouter lumière volumétrique", "ajouter brume", "ajouter texture détaillée", "ajouter vent subtil",
-        "ajouter reflets réalistes", "ajouter profondeur de champ", "ajouter continuité émotionnelle", "ajouter précision décor", "ajouter dynamique du mouvement"
+        "ajouter reflets réalistes", "ajouter profondeur de champ", "ajouter continuité émotionnelle", "ajouter précision décor", "ajouter dynamique du mouvement",
+        "ajouter transition invisible", "ajouter rythme de montage"
       ]
     },
     examples: {
@@ -120,6 +136,12 @@
           questions: ["Performance cible ?", "Plateformes ?", "Interdits ?"],
           extracted: { target: "codex", subtype: "optimisation app existante" },
           improvedPrompt: "Objectifs mesurables (LCP, erreurs), pas de casse UI, plan de tests."
+        },
+        {
+          rawInput: "Construis un agent IA local fiable et sécurisé.",
+          questions: ["Actions autorisées ?", "Niveau d'autonomie ?", "Journalisation attendue ?"],
+          extracted: { target: "codex", subtype: "agent multi-outils" },
+          improvedPrompt: "Orchestration modulaire, garde-fous sécurité, règles de fallback, checklist de validation."
         }
       ],
       sora: [
@@ -134,6 +156,12 @@
           questions: ["Décor exact ?", "Caméra ?", "Format final ?"],
           extracted: { target: "sora", subtype: "nature épique" },
           improvedPrompt: "Vallée glaciaire, contre-jour, vent subtil, focale 35mm, rendu IMAX."
+        },
+        {
+          rawInput: "Pub premium d'un parfum avec rendu ultra réaliste.",
+          questions: ["Produit exact ?", "Durée ?", "Rythme de montage ?"],
+          extracted: { target: "sora", subtype: "pub produit haut de gamme" },
+          improvedPrompt: "Macro textures, lumière de studio, transitions fluides, final packshot propre sans artefacts."
         }
       ]
     }

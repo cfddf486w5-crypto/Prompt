@@ -43,8 +43,14 @@ function run() {
   const weak = engine.detectWeakWords('je veux un prompt pro, complet et intelligent');
   assert.ok(weak.includes('pro'));
   assert.ok(weak.includes('complet'));
+  const strongerWeak = engine.detectWeakWords('je veux un agent fiable, scalable et sécurisé');
+  assert.ok(strongerWeak.includes('fiable'));
+  assert.ok(strongerWeak.includes('scalable'));
+  assert.ok(strongerWeak.includes('sécurisé'));
   const expanded = engine.expandWeakWords('pro et intelligent');
   assert.ok(expanded.length >= 4);
+  const expandedStrong = engine.expandWeakWords('fiable et sécurisé');
+  assert.ok(expandedStrong.length >= 6);
 
   const soraDraft = engine.createDraft('Mini film romantique overland ultra réaliste avec caméra drone et storyboard.', { depthMode: 'ultra' });
   soraDraft.toolTarget = engine.TOOL_TARGETS.SORA;
@@ -86,7 +92,9 @@ function run() {
   assert.ok(boosted.includes('RENFORCEMENT'));
 
   assert.ok(engine.knowledgePack.codexBestPractices.length >= 10);
-  assert.ok(engine.knowledgePack.examples.codex.length >= 3);
+  assert.ok(engine.knowledgePack.examples.codex.length >= 4);
+  assert.ok(engine.knowledgePack.examples.sora.length >= 3);
+  assert.ok(engine.questionModes.architecte.questionLimit >= 16);
 
   console.log('All prompt-engine tests passed.');
 }
