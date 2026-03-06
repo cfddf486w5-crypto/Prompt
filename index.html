@@ -25,39 +25,29 @@
 
   <main class="layout">
     <aside class="sidebar" aria-label="Navigation">
-      <nav class="nav">
-        <button class="nav-item active" data-view="builder">Créer</button>
-        <button class="nav-item" data-view="templates">Templates</button>
-        <button class="nav-item" data-view="history">Historique</button>
-        <button class="nav-item" data-view="settings">Paramètres</button>
+      <nav class="nav nav-icon">
+        <button class="nav-item active" data-view="builder"><span>🛠️</span>Créer</button>
+        <button class="nav-item" data-view="ia"><span>🤖</span>Création IA</button>
+        <button class="nav-item" data-view="templates"><span>📚</span>Templates</button>
+        <button class="nav-item" data-view="history"><span>🕘</span>Historique</button>
+        <button class="nav-item" data-view="settings"><span>⚙️</span>Paramètres</button>
       </nav>
 
-      <section id="projectPanel" class="panel">
-        <div class="panel-title">Projet actif</div>
-        <select id="projectSelect" class="select"></select>
-        <div class="row gap wrap" style="margin-top:10px;">
-          <button id="btnProjectNew" class="btn btn-primary">Créer</button>
-          <button id="btnProjectRename" class="btn btn-ghost">Renommer</button>
-          <button id="btnProjectDelete" class="btn btn-ghost danger">Supprimer</button>
+      <details class="panel collapsible">
+        <summary class="panel-title">📂 Sous-menus création</summary>
+        <div class="field">
+          <label for="templateSelect">Template actif</label>
+          <select id="templateSelect" class="select"></select>
         </div>
-        <div id="projectDescription" class="hint"></div>
-        <div class="field" style="margin-top:8px;"><label for="projectVarLieu">{LIEU} projet</label><input id="projectVarLieu" class="input" /></div>
-        <div class="field"><label for="projectVarStyle">{STYLE} projet</label><input id="projectVarStyle" class="input" /></div>
-        <div class="row gap wrap"><button id="btnProjectVarsSave" class="btn btn-ghost">Sauver variables projet</button><button id="btnProjectPresetSave" class="btn btn-ghost">Sauver preset Sora projet</button></div>
-      </section>
-
-      <section class="panel">
-        <div class="panel-title">Template actif</div>
-        <select id="templateSelect" class="select"></select>
-        <div class="row gap">
+        <div class="row gap wrap">
           <button id="btnNewFromTemplate" class="btn btn-primary">Nouveau</button>
           <button id="btnSaveToHistory" class="btn btn-secondary">Sauver</button>
         </div>
         <div class="hint">Astuce: utilise des variables comme <code>{LIEU}</code>, <code>{STYLE}</code>, <code>{DUREE}</code>.</div>
-      </section>
+      </details>
 
-      <section class="panel">
-        <div class="panel-title">Outils rapides</div>
+      <details class="panel collapsible">
+        <summary class="panel-title">🧩 Variables rapides</summary>
         <div class="row gap wrap">
           <button class="chip" data-insert="{LIEU}">{LIEU}</button>
           <button class="chip" data-insert="{SUJET}">{SUJET}</button>
@@ -66,10 +56,10 @@
           <button class="chip" data-insert="{FORMAT}">{FORMAT}</button>
           <button class="chip" data-insert="{CONTRAINTES}">{CONTRAINTES}</button>
         </div>
-      </section>
+      </details>
 
-      <section class="panel">
-        <div class="panel-title">Insérer bloc</div>
+      <details class="panel collapsible">
+        <summary class="panel-title">🧱 Bloc rapide</summary>
         <div class="row gap" style="margin-bottom:8px;">
           <input id="blockSearch" class="input" placeholder="Rechercher bloc" />
           <select id="blockGroup" class="select">
@@ -83,7 +73,7 @@
           </select>
         </div>
         <div id="blockChips" class="row gap wrap"></div>
-      </section>
+      </details>
     </aside>
 
     <section class="content">
@@ -177,6 +167,33 @@
         </div>
       </section>
 
+      <section id="view-ia" class="view">
+        <section class="card">
+          <div class="card-title">Création IA</div>
+          <p class="hint">Bonjour 👋 je suis <strong>Félix votre prompteur</strong>. Donne-moi une brève description, je vais décortiquer votre besoin et proposer 3-4 choix parmi une base de 1000 options.</p>
+          <div class="grid2">
+            <div class="field"><label for="iaMode">Encadré IA #1</label><select id="iaMode" class="select"><option value="codex">Codex</option><option value="sora">Sora</option></select></div>
+            <div class="field"><label for="iaMode2">Encadré IA #2</label><select id="iaMode2" class="select"><option value="sora">Sora</option><option value="codex">Codex</option></select></div>
+          </div>
+          <div class="field"><label for="iaBrief">Brève description</label><textarea id="iaBrief" class="textarea" rows="3" placeholder="Ex: Je veux un prompt codex pour refactoriser une app de menu avec accordéons et page IA."></textarea></div>
+          <button id="btnIaAnalyze" class="btn btn-secondary">Démarrer la séquence IA</button>
+          <div id="iaRecommendations" class="list" style="margin-top:10px;"></div>
+
+          <div class="grid2" style="margin-top:10px;">
+            <div class="field"><label for="iaTone">Ton</label><select id="iaTone" class="select"><option>professionnel</option><option>créatif</option><option>direct</option><option>pédagogique</option></select></div>
+            <div class="field"><label for="iaAudience">Audience</label><select id="iaAudience" class="select"><option>développeur</option><option>client final</option><option>équipe produit</option><option>général</option></select></div>
+            <div class="field"><label for="iaOutput">Sortie attendue</label><select id="iaOutput" class="select"><option>plan étape par étape</option><option>prompt final direct</option><option>checklist + prompt</option><option>JSON structuré</option></select></div>
+            <div class="field"><label for="iaDepth">Niveau de détail</label><select id="iaDepth" class="select"><option>concis</option><option>équilibré</option><option>détaillé</option><option>expert</option></select></div>
+          </div>
+
+          <div class="row gap wrap">
+            <button id="btnIaGenerate" class="btn btn-primary">Générer le prompt prêt à copier</button>
+            <button id="btnIaCopy" class="btn btn-ghost">Copier le prompt IA</button>
+          </div>
+          <div class="field" style="margin-top:10px;"><label for="iaFinalPrompt">Prompt final IA</label><textarea id="iaFinalPrompt" class="textarea mono" rows="10" spellcheck="false"></textarea></div>
+        </section>
+      </section>
+
       <section id="view-templates" class="view">
         <div class="grid2">
           <section class="card">
@@ -215,6 +232,21 @@
       <section id="view-settings" class="view">
         <section class="card">
           <div class="card-title">Paramètres</div>
+
+          <section id="projectPanel" class="panel" style="margin-bottom:10px;">
+            <div class="panel-title">Gestion des projets</div>
+            <select id="projectSelect" class="select"></select>
+            <div class="row gap wrap" style="margin-top:10px;">
+              <button id="btnProjectNew" class="btn btn-primary">Créer</button>
+              <button id="btnProjectRename" class="btn btn-ghost">Renommer</button>
+              <button id="btnProjectDelete" class="btn btn-ghost danger">Supprimer</button>
+            </div>
+            <div id="projectDescription" class="hint"></div>
+            <div class="field" style="margin-top:8px;"><label for="projectVarLieu">{LIEU} projet</label><input id="projectVarLieu" class="input" /></div>
+            <div class="field"><label for="projectVarStyle">{STYLE} projet</label><input id="projectVarStyle" class="input" /></div>
+            <div class="row gap wrap"><button id="btnProjectVarsSave" class="btn btn-ghost">Sauver variables projet</button><button id="btnProjectPresetSave" class="btn btn-ghost">Sauver preset Sora projet</button></div>
+          </section>
+
           <div class="field">
             <label for="prefDefaultType">Type par défaut</label>
             <select id="prefDefaultType" class="select"><option value="codex">Codex</option><option value="sora">Sora</option></select>
