@@ -87,3 +87,60 @@ Application statique **offline-first** (HTML/CSS/JS), compatible GitHub Pages.
 - Tester export complet puis réimport.
 - Tester recherche templates/historique/blocs (debounce fluide).
 - Tester Sora Random pro + génération auto.
+
+## Knowledge Pack IA embarqué (local-only)
+Le moteur IA de `prompt-engine.js` embarque désormais une base de connaissances locale extensible :
+
+- `promptHeuristics`: grille qualité (objectif, contraintes, actionnabilité, tool-fit, ambiguïtés, etc.).
+- `antiVague`: dictionnaire de mots vagues (`pro`, `complet`, `intelligent`, etc.) vers critères concrets.
+- `codexBestPractices` / `soraBestPractices`: règles de génération orientées outil.
+- `questionStrategies`: modes `rapide`, `standard`, `expert`, `ultra` (volume/profondeur/temps estimé/enrichissement).
+- `promptPatterns`: patrons prêts à remplir pour branches Codex/Sora.
+- `improvementBoosters`: blocs d’amélioration automatiques proposés.
+- `examples`: exemples concrets intégrés (input brut → questions → extraction → prompt amélioré).
+
+### Utilisation interne (sans changement UI)
+1. `createDraft(description, { depthMode })` fait l’analyse initiale.
+2. `missingInfoEngine` + `adaptiveQuestionFlow` sélectionnent les questions prioritaires.
+3. `composeAllVariants` génère le moteur de sortie final:
+   - Prompt court
+   - Prompt pro
+   - Prompt XL
+   - Prompt technique
+   - Variante alternative
+   - Résumé projet
+   - Checklist automatique
+4. `exportModule` fournit un payload prêt à copier/exporter.
+
+### Scoring évolué
+Le score final combine:
+- clarté
+- profondeur
+- contexte
+- actionnabilité
+- risque d’ambiguïté
+- richesse de contraintes
+- adéquation à l’outil cible
+
+### Recommandations finales
+Le moteur produit automatiquement:
+- ce qui manque encore (`missing`)
+- ce qu’il recommande d’ajouter
+- un booster final “Ton prompt sera plus fort si …”
+
+### 5 cas où le résultat est nettement meilleur
+1. **Input brut**: “Fais un truc pro pour mon app.”
+   - Avant: prompt flou.
+   - Après: anti-vague transforme `pro` en critères mesurables + contraintes + livrables.
+2. **Input brut**: “Ajoute une IA sans toucher au ui.”
+   - Avant: oubli des validations/tests.
+   - Après: rappel explicite multi-sections “ne pas toucher UI”, validations et checklist.
+3. **Input brut**: “Road trip romantique ultra réaliste.”
+   - Avant: simple phrase artistique.
+   - Après: structure Sora complète (décor/lumière/météo/caméra/continuité/exclusions).
+4. **Input brut**: “Refonte logique app existante.”
+   - Avant: risque de refonte visuelle involontaire.
+   - Après: branche Codex spécialisée “refonte logique”, contraintes absolues et architecture modulaire.
+5. **Input brut**: “Je veux quelque chose d’intelligent et complet.”
+   - Avant: interprétation aléatoire.
+   - Après: table anti-vague + questions dynamiques + hypothèses marquées si réponse incomplète.

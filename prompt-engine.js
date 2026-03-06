@@ -4,84 +4,198 @@
 })(typeof self !== "undefined" ? self : this, function () {
   const TOOL_TARGETS = { CODEX: "codex", SORA: "sora", UNKNOWN: "unknown" };
 
-  const weakWords = ["beau", "pro", "moderne", "rapide", "puissant", "clean", "nice", "meilleur", "complet", "intelligent", "simple", "avancé"];
-
-  const codexSubtypes = [
-    "création app complète", "ajout fonctionnalité", "bug fix", "refonte logique sans toucher UI", "amélioration UX", "intégration API",
-    "génération composant/page/module", "architecture projet", "optimisation performance", "compatibilité mobile/desktop", "offline/localStorage",
-    "import/export fichier", "sécurité/login", "tests/QA", "génération repo complet", "documentation/README", "PWA", "page 3D / canvas / map / layout",
-    "traitement données / csv / xlsx", "assistant IA intégré"
-  ];
-
-  const soraSubtypes = [
-    "scène cinéma", "scène romantique", "clip voyage / road trip", "scène action", "scène nature", "ultra réaliste", "stylisé / artistique", "boucle vidéo",
-    "publicité / promo", "plan drone", "plan intime", "chorégraphie / danse", "storyboard multi-scènes", "générateur aléatoire", "vidéo verticale",
-    "vidéo horizontale", "scène avec ambiance précise", "séquence émotionnelle"
-  ];
-
-  const codexQuestionBank = [
-    "Quel est l’objectif principal exact ?", "Est-ce une app existante ou un nouveau projet ?", "Faut-il conserver 100% du UI actuel ?",
-    "Qu’est-ce qu’on a le droit de modifier ?", "Qu’est-ce qu’on n’a pas le droit de modifier ?", "Sur quelles plateformes ça doit fonctionner ?",
-    "Est-ce que le projet doit fonctionner offline ?", "Faut-il utiliser localStorage ?", "GitHub Pages est-il requis ?", "Faut-il une compatibilité mobile-first ?",
-    "Est-ce que la version PC Windows compte aussi ?", "Quel est le flux principal de la page ?", "Faut-il des validations ?", "Faut-il un historique ?",
-    "Faut-il des presets ?", "Faut-il des variantes de prompts ?", "Faut-il un score qualité du prompt ?", "Faut-il des recommandations avant génération ?",
-    "Faut-il générer une version courte et une version XL ?", "L’app doit-elle fonctionner sans backend ?", "Faut-il préparer le code pour une future API IA ?",
-    "Faut-il une détection automatique des mots faibles ?", "Faut-il un système de mémoire locale des préférences de l’utilisateur ?"
-  ];
-
-  const soraQuestionBank = [
-    "Quel type de vidéo veux-tu créer ?", "Combien de scènes ?", "Quelle durée approximative ?", "Format vertical, horizontal ou carré ?",
-    "Style visuel : ultra réaliste, cinéma, rêve, pub, documentaire ?", "Ambiance principale ?", "Heure de la journée ?", "Conditions météo ?",
-    "Décor principal ?", "Y a-t-il du mouvement de caméra ?", "Y a-t-il des personnages ?", "Quelles émotions doivent ressortir ?",
-    "Quelles actions précises se déroulent ?", "Faut-il une continuité visuelle entre les scènes ?", "Prompt unique ou storyboard scène par scène ?",
-    "Faut-il ajouter lumière, textures, vent, reflets, brume, particules ?", "Sortie simple ou ultra détaillée ?"
-  ];
-
-  const presetLibrary = {
-    codex: ["Ne touche pas au UI", "Ajouter seulement la logique", "Mobile + PC", "Offline-first", "GitHub Pages compatible", "localStorage obligatoire", "Sans backend", "Préparer pour future API", "Ajouter validations", "Ajouter historique", "Ajouter FAQ", "Ajouter tests", "Ajouter README", "Conserver style actuel 100%"],
-    sora: ["Ultra réaliste", "Hollywood", "Road trip", "Romantique", "Nature grandiose", "Danse", "Drone", "Aurores boréales", "Coucher de soleil", "Brouillard cinématographique", "Mouvement fluide", "4K / très haute définition"]
+  const QUESTION_MODES = {
+    rapide: { questionLimit: 3, depth: "faible", userTimeMin: 1, enrichment: "faible" },
+    standard: { questionLimit: 6, depth: "moyenne", userTimeMin: 3, enrichment: "moyen" },
+    expert: { questionLimit: 10, depth: "haute", userTimeMin: 6, enrichment: "élevé" },
+    ultra: { questionLimit: 14, depth: "très haute", userTimeMin: 10, enrichment: "maximal" }
   };
 
-  const examplesLibrary = {
-    codex: [
-      "Ajoute un moteur IA à ma page existante sans toucher au UI",
-      "Ajouter import CSV/XLSX", "Transformer une app en machine offline-first", "Ajouter localStorage et historique", "Refactoriser sans casser l’apparence"
+  const KNOWLEDGE_PACK = {
+    promptHeuristics: [
+      { key: "objective", label: "objectif clair", weight: 12 },
+      { key: "measurable", label: "résultat mesurable", weight: 8 },
+      { key: "constraints", label: "contraintes explicites", weight: 10 },
+      { key: "platform", label: "plateforme nommée", weight: 8 },
+      { key: "forbidden", label: "interdictions explicites", weight: 8 },
+      { key: "initialState", label: "état initial connu", weight: 7 },
+      { key: "finalState", label: "état final attendu", weight: 7 },
+      { key: "outputFormat", label: "format de sortie", weight: 8 },
+      { key: "detailCoherence", label: "degré de détail cohérent", weight: 6 },
+      { key: "ambiguityHandling", label: "gestion des ambiguïtés", weight: 8 },
+      { key: "toolFit", label: "adéquation outil cible", weight: 10 },
+      { key: "actionable", label: "actionnabilité", weight: 8 }
     ],
-    sora: ["road trip romantique", "aurore boréale au bord de l’océan", "danse cinéma paysage immense", "clip ultra réaliste avec caméra drone"]
+    antiVague: {
+      pro: ["hiérarchie visuelle claire", "cohérence de spacing", "composants alignés", "états d'erreur gérés", "code modulaire", "responsive solide", "feedback utilisateur net"],
+      complet: ["structure principale", "cas limites", "validation", "historique", "erreurs", "export", "documentation", "tests"],
+      intelligent: ["détection automatique", "suggestions contextuelles", "fallback", "recommandations", "résumé raisonné", "adaptation aux réponses précédentes"],
+      rapide: ["temps de réponse défini", "zéro blocage", "latence minimale", "priorité au flux principal"],
+      moderne: ["design system cohérent", "accessibilité de base", "typographie lisible", "contrastes conformes"],
+      puissant: ["gestion edge cases", "mécanismes de récupération", "scalabilité logique", "journalisation utile"]
+    },
+    codexBestPractices: [
+      "Préciser ce qui existe déjà.",
+      "Préciser ce qui est interdit.",
+      "Préciser le type de livrable.",
+      "Préciser les plateformes.",
+      "Préciser si offline.",
+      "Préciser si GitHub Pages.",
+      "Préciser si localStorage.",
+      "Préciser si sans backend.",
+      "Préciser si PWA.",
+      "Préciser les critères de réussite.",
+      "Demander un code propre, modulaire, maintenable.",
+      "Demander de ne pas casser le style existant.",
+      "Demander un test logique final."
+    ],
+    soraBestPractices: [
+      "Décrire ambiance, lumière, météo, décor, textures.",
+      "Définir caméra, mouvement, échelle, émotion.",
+      "Préciser rendu, continuité, exclusions.",
+      "Préciser durée/format si connu.",
+      "Ajouter cohérence entre plans.",
+      "Limiter les ambiguïtés narratives."
+    ],
+    questionStrategies: QUESTION_MODES,
+    promptPatterns: {
+      codex: {
+        "ajout fonctionnalité sans toucher UI": "Enrichir l'app existante sans modifier le visuel, uniquement logique + validations + tests.",
+        "refonte logique": "Refactoriser architecture métier en modules sans impacter rendu.",
+        "nouvelle page": "Ajouter une page cohérente avec navigation et état global.",
+        "import/export": "Ajouter import/export robuste avec validation, erreurs, compatibilité offline.",
+        "assistant IA embarqué": "Créer assistant local guidé avec scoring et recommandations.",
+        "module offline": "Garantir fonctionnement hors ligne et synchronisation locale.",
+        "mobile-first": "Optimiser flux mobile puis desktop sans casser l'existant.",
+        "multi-pages": "Structurer routes/pages tout en conservant architecture maintenable.",
+        "intégration future API": "Préparer interfaces/facades pour API future sans dépendance réseau immédiate.",
+        "optimisation app existante": "Améliorer performance, robustesse, observabilité sans refonte UI."
+      },
+      sora: {
+        "scène unique cinéma": "Une scène cinématique continue avec progression émotionnelle.",
+        "storyboard multi-scènes": "Storyboard en plans séquentiels cohérents.",
+        "clip romantique": "Récit romantique sensible, lumière douce, mouvements fluides.",
+        "road trip": "Trajet progressif, paysages variés, continuité véhicule/personnages.",
+        "nature épique": "Échelle grandiose, météo dramatique, texture réaliste.",
+        "scène de danse": "Rythme, chorégraphie, plans synchronisés.",
+        "plans drone": "Mouvements aériens stables, transitions panoramiques.",
+        "rendu Hollywood": "Mise en scène premium, contraste maîtrisé, étalonnage cinéma.",
+        "paysage aléatoire ultra réaliste": "Générer paysage plausible avec détails micro-textures et profondeur atmosphérique."
+      }
+    },
+    improvementBoosters: {
+      codex: [
+        "ajouter validations", "ajouter historique", "ajouter sauvegarde brouillon", "ajouter presets", "ajouter score qualité",
+        "ajouter variantes", "ajouter mode expert", "ajouter import/export projet", "ajouter README", "ajouter tests"
+      ],
+      sora: [
+        "ajouter caméra cinématique", "ajouter lumière volumétrique", "ajouter brume", "ajouter texture détaillée", "ajouter vent subtil",
+        "ajouter reflets réalistes", "ajouter profondeur de champ", "ajouter continuité émotionnelle", "ajouter précision décor", "ajouter dynamique du mouvement"
+      ]
+    },
+    examples: {
+      codex: [
+        {
+          rawInput: "Ajoute une IA à ma page de prompts sans toucher au UI.",
+          questions: ["App existante ?", "Offline requis ?", "Livrable attendu ?"],
+          extracted: { target: "codex", uiLock: true, existing: true },
+          improvedPrompt: "Mission claire + contraintes UI strictes + architecture + validations + tests + checklist."
+        },
+        {
+          rawInput: "Je veux un module import/export pro.",
+          questions: ["Formats supportés ?", "Gestion erreurs ?", "Mode offline ?"],
+          extracted: { target: "codex", subtype: "import/export" },
+          improvedPrompt: "Import/export JSON/CSV, validation, fallback, logs, tests."
+        },
+        {
+          rawInput: "Optimise mon app existante.",
+          questions: ["Performance cible ?", "Plateformes ?", "Interdits ?"],
+          extracted: { target: "codex", subtype: "optimisation app existante" },
+          improvedPrompt: "Objectifs mesurables (LCP, erreurs), pas de casse UI, plan de tests."
+        }
+      ],
+      sora: [
+        {
+          rawInput: "Mini film romantique overland ultra réaliste.",
+          questions: ["Durée ?", "Nombre de scènes ?", "Météo/lumière ?"],
+          extracted: { target: "sora", subtype: "road trip" },
+          improvedPrompt: "Storyboard 5 plans, golden hour, pluie légère, travelling + drone, continuité émotionnelle."
+        },
+        {
+          rawInput: "Je veux une scène nature épique.",
+          questions: ["Décor exact ?", "Caméra ?", "Format final ?"],
+          extracted: { target: "sora", subtype: "nature épique" },
+          improvedPrompt: "Vallée glaciaire, contre-jour, vent subtil, focale 35mm, rendu IMAX."
+        }
+      ]
+    }
+  };
+
+  const codexSignals = ["app", "code", "ui", "bug", "feature", "localstorage", "github pages", "offline", "api", "test", "readme", "module", "import", "export", "pwa"];
+  const soraSignals = ["vidéo", "video", "scène", "camera", "drone", "cinéma", "hollywood", "lumière", "plan", "ambiance", "storyboard", "render", "météo"];
+
+  const QUESTION_BANK = {
+    codex: {
+      contexte: ["Est-ce une app existante ou un nouveau projet ?", "Quel est l'objectif principal exact ?", "Quel état initial est déjà en place ?"],
+      contraintes: ["Faut-il conserver 100% du UI actuel ?", "Qu'est-ce qui est interdit ?", "Offline/localStorage requis ?", "GitHub Pages obligatoire ?", "Sans backend ?"],
+      sortie: ["Quel type de livrable veux-tu (patch, fichiers, README, tests) ?", "Quel format de sortie final ?"],
+      qualité: ["Niveau de détail attendu (rapide/équilibré/expert/XL) ?", "Critères de réussite mesurables ?", "Ajouter validations/tests finaux ?"],
+      technique: ["Plateformes cibles (iPhone, PC, web) ?", "Compatibilité multi-pages/PWA ?", "Préparer une future API ?"]
+    },
+    sora: {
+      contexte: ["Quel est le sujet principal ?", "Scène unique ou multi-scènes ?", "Quelle émotion dominante ?"],
+      contraintes: ["Exclusions explicites ?", "Niveau de réalisme ?", "Durée/format ?"],
+      sortie: ["Prompt unique ou storyboard ?", "Version courte/pro/XL souhaitée ?"],
+      qualité: ["Niveau de détail voulu ?", "Continuité visuelle stricte ?", "Rendu cible (cinéma/pub/docu) ?"],
+      detailsVisuels: ["Décor précis ?", "Lumière et météo ?", "Texture et profondeur de champ ?"],
+      technique: ["Mouvements caméra clés ?", "Cadence/rythme ?", "Échelle de plans ?"]
+    }
   };
 
   function normalize(text) { return String(text || "").toLowerCase().trim(); }
 
   function detectWeakWords(text) {
     const t = normalize(text);
-    return weakWords.filter((w) => t.includes(w));
+    return Object.keys(KNOWLEDGE_PACK.antiVague).filter((word) => t.includes(word));
+  }
+
+  function expandWeakWords(text) {
+    return detectWeakWords(text).flatMap((w) => KNOWLEDGE_PACK.antiVague[w].map((item) => ({ source: w, concrete: item })));
+  }
+
+  function inferTool(text) {
+    const t = normalize(text);
+    const codexScore = codexSignals.reduce((a, s) => a + (t.includes(s) ? 1 : 0), 0);
+    const soraScore = soraSignals.reduce((a, s) => a + (t.includes(s) ? 1 : 0), 0);
+    if (codexScore === soraScore) return TOOL_TARGETS.UNKNOWN;
+    return codexScore > soraScore ? TOOL_TARGETS.CODEX : TOOL_TARGETS.SORA;
   }
 
   function detectSubtype(text, target) {
     const t = normalize(text);
-    const list = target === TOOL_TARGETS.SORA ? soraSubtypes : codexSubtypes;
-    return list.find((s) => t.includes(s.split(" ")[0])) || (target === TOOL_TARGETS.SORA ? "scène cinéma" : "ajout fonctionnalité");
+    const patterns = KNOWLEDGE_PACK.promptPatterns[target] || {};
+    const keys = Object.keys(patterns);
+    const found = keys.find((k) => k.split(" ").every((token) => token.length < 4 || t.includes(token)));
+    if (found) return found;
+    return target === TOOL_TARGETS.SORA ? "scène unique cinéma" : "ajout fonctionnalité sans toucher UI";
   }
 
   function intentClassifier(rawText) {
     const text = normalize(rawText);
-    const codexSignals = ["app", "code", "ui", "bug", "feature", "localstorage", "github pages", "offline", "api", "test", "readme"];
-    const soraSignals = ["vidéo", "video", "scène", "camera", "drone", "cinéma", "hollywood", "lumière", "plan", "ambiance"];
-    const codexScore = codexSignals.reduce((a, s) => a + (text.includes(s) ? 1 : 0), 0);
-    const soraScore = soraSignals.reduce((a, s) => a + (text.includes(s) ? 1 : 0), 0);
-    const toolTarget = codexScore === soraScore ? TOOL_TARGETS.UNKNOWN : (codexScore > soraScore ? TOOL_TARGETS.CODEX : TOOL_TARGETS.SORA);
+    const toolTarget = inferTool(text);
     const weak = detectWeakWords(text);
     const missing = [];
-    if (!text.includes("objectif")) missing.push("objectif précis");
-    if (!text.includes("contraint")) missing.push("contraintes explicites");
-    if (!text.includes("offline")) missing.push("exigence offline");
+    if (!/(objectif|but|mission)/.test(text)) missing.push("objectif précis");
+    if (!/(contraint|interdit|ne pas)/.test(text)) missing.push("contraintes explicites");
+    if (!/(format|sortie|livrable|storyboard)/.test(text)) missing.push("format de sortie");
     return {
       toolTarget,
       subtype: detectSubtype(text, toolTarget === TOOL_TARGETS.UNKNOWN ? TOOL_TARGETS.CODEX : toolTarget),
-      precisionLevel: text.length > 320 ? "élevé" : text.length > 120 ? "moyen" : "faible",
+      precisionLevel: text.length > 350 ? "élevé" : text.length > 140 ? "moyen" : "faible",
       missing,
       ambiguityRisks: [...weak, ...(toolTarget === TOOL_TARGETS.UNKNOWN ? ["cible ambiguë codex/sora"] : [])],
-      complexity: text.length > 450 ? "élevée" : "modérée"
+      complexity: text.length > 450 ? "élevée" : text.length > 200 ? "modérée" : "simple",
+      keywordHighlights: text.split(/\s+/).filter((w) => w.length > 5).slice(0, 12)
     };
   }
 
@@ -90,22 +204,20 @@
     const t = normalize(text);
     return {
       projectName: "",
-      objective: text.split(".")[0] || "",
+      objective: text.split(/[.!?]/)[0] || "",
       existingUI: /existant|déjà|already/.test(t),
-      uiLock: /ne touche pas au ui|ne pas toucher au ui|100%.*apparence|conserver.*ui/.test(t),
-      targetPlatforms: [/(iphone|mobile)/.test(t) ? "iPhone" : "", /(windows|pc)/.test(t) ? "PC Windows" : "", /(web|github pages)/.test(t) ? "Web/GitHub Pages" : ""].filter(Boolean),
+      uiLock: /ne touche pas au ui|ne pas toucher au ui|conserver.*ui|sans toucher.*ui/.test(t),
+      targetPlatforms: [/(iphone|ios|mobile)/.test(t) ? "iPhone" : "", /(windows|pc|desktop)/.test(t) ? "PC Windows" : "", /(web|github pages)/.test(t) ? "Web/GitHub Pages" : ""].filter(Boolean),
       offlineRequired: /offline|hors ligne/.test(t),
+      localStorageRequired: /localstorage/.test(t),
       repoTarget: /github/.test(t) ? "GitHub Pages" : "",
-      performanceNeeds: /perform|rapide/.test(t) ? "optimisation" : "",
-      language: /anglais|english/.test(t) ? "en" : "fr",
-      tone: /pro|professionnel/.test(t) ? "professionnel" : "direct",
-      outputLength: /xl|détaillé|ultra/.test(t) ? "xl" : "pro",
-      complexityLevel: t.length > 350 ? "high" : "medium",
-      restrictions: /ne pas|interdit/.test(t) ? ["restrictions utilisateur détectées"] : [],
-      deliveryFormat: /json/.test(t) ? "json" : "texte",
-      references: [],
-      mustInclude: [],
-      mustAvoid: []
+      noBackend: /sans backend|no backend/.test(t),
+      pwa: /pwa/.test(t),
+      outputFormat: /json/.test(t) ? "json" : /markdown/.test(t) ? "markdown" : "texte",
+      visualStyle: /ultra réaliste|cinéma|hollywood|pub/.test(t) ? "cinématique" : "",
+      duration: (text.match(/\b\d+\s?(s|sec|min)\b/i) || [""])[0],
+      restrictions: /ne pas|interdit|sans toucher/.test(t) ? ["restrictions utilisateur détectées"] : [],
+      assumptions: []
     };
   }
 
@@ -115,184 +227,409 @@
   }
 
   function missingInfoEngine(draft) {
-    const ideal = modelIdeal(draft.toolTarget);
+    const ideal = modelIdeal(draft.toolTarget === TOOL_TARGETS.UNKNOWN ? TOOL_TARGETS.CODEX : draft.toolTarget);
+    const src = normalize(draft.userRawDescription);
     const known = {
       objectif: !!draft.extractedInfo.objective,
-      scope: !!draft.extractedInfo.existingUI,
+      scope: draft.extractedInfo.existingUI || /nouveau projet/.test(src),
       contraintes: draft.extractedInfo.restrictions.length > 0 || draft.extractedInfo.uiLock,
       plateformes: draft.extractedInfo.targetPlatforms.length > 0,
-      offline: typeof draft.extractedInfo.offlineRequired === "boolean",
-      localStorage: /localstorage/i.test(draft.userRawDescription),
-      livrables: /livrable|output|sortie/.test(normalize(draft.userRawDescription)),
-      tests: /test/.test(normalize(draft.userRawDescription)),
-      durée: /s|sec|min/.test(normalize(draft.userRawDescription)),
-      format: /16:9|9:16|vertical|horizontal|carré/.test(normalize(draft.userRawDescription)),
-      ambiance: /ambiance|mood|romantique|dramatique/.test(normalize(draft.userRawDescription)),
-      caméra: /camera|drone|travelling|plan/.test(normalize(draft.userRawDescription)),
-      décor: /forêt|océan|ville|décor|scene/.test(normalize(draft.userRawDescription)),
-      style: /cinéma|réaliste|artistique/.test(normalize(draft.userRawDescription)),
-      sortie: /storyboard|prompt/.test(normalize(draft.userRawDescription))
+      offline: /offline|hors ligne/.test(src),
+      localStorage: /localstorage/.test(src),
+      livrables: /livrable|output|sortie|fichier/.test(src),
+      tests: /test|qa|validation/.test(src),
+      durée: /\b\d+\s?(s|sec|min)\b/.test(src),
+      format: /16:9|9:16|vertical|horizontal|carré/.test(src),
+      ambiance: /ambiance|mood|romantique|dramatique/.test(src),
+      caméra: /camera|drone|travelling|plan/.test(src),
+      décor: /forêt|océan|ville|décor|scene|route|montagne/.test(src),
+      style: /cinéma|réaliste|artistique|hollywood|pub/.test(src),
+      sortie: /storyboard|prompt/.test(src)
     };
-    return ideal.filter((key) => !known[key]).map((k, idx) => ({
-      key: k,
-      priority: idx < 3 ? "critique" : idx < 6 ? "importante" : "bonus"
-    }));
+    return ideal.filter((key) => !known[key]).map((k, idx) => ({ key: k, priority: idx < 3 ? "critique" : idx < 6 ? "importante" : "bonus" }));
+  }
+
+  function applyAssumptions(draft) {
+    const assumptions = [];
+    if (draft.toolTarget === TOOL_TARGETS.CODEX && !draft.extractedInfo.localStorageRequired) assumptions.push("Hypothèse: localStorage recommandé pour persistance locale.");
+    if (draft.toolTarget === TOOL_TARGETS.SORA && !draft.extractedInfo.duration) assumptions.push("Hypothèse: durée 20-30 secondes.");
+    if (draft.toolTarget === TOOL_TARGETS.UNKNOWN) assumptions.push("Hypothèse: cible Codex par défaut tant que la cible n'est pas confirmée.");
+    draft.extractedInfo.assumptions = assumptions;
+    return draft;
+  }
+
+  function selectQuestionMode(draft) {
+    if (draft.depthMode && QUESTION_MODES[draft.depthMode]) return draft.depthMode;
+    if (draft.parsedIntent.precisionLevel === "élevé") return "rapide";
+    if (draft.parsedIntent.complexity === "élevée") return "expert";
+    return "standard";
   }
 
   function adaptiveQuestionFlow(draft) {
-    const missing = draft.missingQuestions || [];
-    const bank = draft.toolTarget === TOOL_TARGETS.SORA ? soraQuestionBank : codexQuestionBank;
-    const qs = [];
-    missing.forEach((m) => {
-      const found = bank.find((q) => normalize(q).includes(m.key));
-      if (found) qs.push({ question: found, priority: m.priority, key: m.key });
+    const target = draft.toolTarget === TOOL_TARGETS.UNKNOWN ? TOOL_TARGETS.CODEX : draft.toolTarget;
+    const modeKey = selectQuestionMode(draft);
+    const mode = QUESTION_MODES[modeKey];
+    const bank = QUESTION_BANK[target] || QUESTION_BANK.codex;
+    const prioritized = [];
+
+    const criticalOrder = ["outil cible", "objectif principal", "existant ou nouveau", "verrou UI", "plateforme", "format de sortie"];
+    criticalOrder.forEach((item) => prioritized.push({ question: `Clarification critique: ${item} ?`, priority: "critique", key: item }));
+
+    Object.entries(bank).forEach(([block, questions]) => {
+      questions.forEach((q) => prioritized.push({ question: q, priority: block === "contexte" || block === "contraintes" ? "critique" : "importante", key: block }));
     });
-    if (!qs.length) qs.push({ question: "Souhaites-tu une version pro, XL, et technique ?", priority: "bonus", key: "variants" });
-    return draft.parsedIntent.precisionLevel === "élevé" ? qs.slice(0, 3) : qs.slice(0, 8);
+
+    const dedup = [];
+    const seen = new Set();
+    prioritized.forEach((q) => {
+      const key = normalize(q.question);
+      if (!seen.has(key)) {
+        seen.add(key);
+        dedup.push(q);
+      }
+    });
+
+    return dedup.slice(0, mode.questionLimit);
   }
 
-  function buildConstraintLines(info) {
+  function buildConstraintLines(info, target) {
     const lines = [];
-    if (info.uiLock) lines.push("Ne jamais modifier le UI/visuel existant.");
-    if (info.offlineRequired) lines.push("Logique locale prioritaire et fonctionnement offline autant que possible.");
+    if (info.uiLock) {
+      lines.push("Ne jamais modifier le UI/visuel existant.");
+      lines.push("Répétition sécurité: aucune altération du style actuel n'est autorisée.");
+    }
+    if (info.offlineRequired) lines.push("Fonctionnement offline requis.");
     if (info.targetPlatforms.length) lines.push(`Compatibilité cible: ${info.targetPlatforms.join(", ")}.`);
     if (info.repoTarget) lines.push(`Déploiement attendu: ${info.repoTarget}.`);
-    lines.push("Utiliser localStorage pour brouillons, préférences, historique et presets.");
+    if (target === TOOL_TARGETS.CODEX) {
+      lines.push(info.localStorageRequired ? "localStorage obligatoire." : "localStorage recommandé pour brouillons/préférences/historique.");
+      if (info.noBackend) lines.push("Aucun backend autorisé.");
+      if (info.pwa) lines.push("Prévoir contraintes PWA.");
+    }
     return lines;
   }
 
-  function buildCodexPrompt(draft, level) {
-    const constraints = buildConstraintLines(draft.extractedInfo);
-    const detailBoost = level === "xl" ? "Ajouter plan d'implémentation détaillé, validations, edge cases et checklists." : "Rester clair et exécutable.";
-    return [
-      "RÔLE: Tu es un ingénieur logiciel senior spécialisé en évolution d'application existante.",
-      `MISSION: ${draft.extractedInfo.objective || draft.userRawDescription}`,
-      "CONTRAINTES ABSOLUES:", ...constraints.map((c) => `- ${c}`),
-      "CONTEXTE:", `- Sous-type: ${draft.subtype}`, `- Précision actuelle: ${draft.parsedIntent.precisionLevel}`,
-      "EXÉCUTION ATTENDUE:", "- Proposer architecture modulaire.", "- Ajouter validateurs et états d'erreur.", "- Inclure tests/QA et critères de réussite.",
-      `NIVEAU: ${level}. ${detailBoost}`
-    ].join("\n");
+  function sanitizePrompt(text) {
+    const lines = String(text || "").split("\n").map((x) => x.trimEnd());
+    const compact = [];
+    const seen = new Set();
+    lines.forEach((line) => {
+      const k = normalize(line);
+      if (!k) {
+        if (compact.length && compact[compact.length - 1] !== "") compact.push("");
+        return;
+      }
+      if (!seen.has(k)) {
+        seen.add(k);
+        compact.push(line);
+      }
+    });
+    return compact.join("\n").replace(/\n{3,}/g, "\n\n").trim();
   }
 
-  function buildSoraPrompt(draft, level) {
+  function codexSections(draft, level) {
     const e = draft.extractedInfo;
-    return [
-      "STYLE GLOBAL: vidéo cinématique cohérente et premium.",
-      `SUJET: ${e.objective || draft.userRawDescription}`,
-      "PARAMÈTRES VISUELS:",
-      "- Décrire décor, lumière, textures, reflets, profondeur atmosphérique.",
-      "- Préciser mouvement caméra, cadrages, continuité entre scènes.",
-      "- Injecter émotions et rythme.",
-      `FORMAT: ${level === "technical" ? "contraintes strictes + exclusions explicites" : "narratif riche prêt à copier"}`
-    ].join("\n");
+    const constraints = buildConstraintLines(e, TOOL_TARGETS.CODEX).map((c) => `- ${c}`).join("\n");
+    const objective = e.objective || draft.userRawDescription;
+    const detailBoost = level === "xl" ? "Détail maximal: inclure pseudo-code, cas limites, plan de validation, impacts et rollback." : "Détail professionnel exécutable.";
+    const technicalBonus = level === "technical" ? "Inclure structures de données, signatures fonctions et stratégie tests unitaires/intégration." : "";
+
+    return sanitizePrompt([
+      "1) RÔLE / MISSION",
+      "Tu es GPT-5.2-Codex, ingénieur logiciel senior spécialisé en évolution d'app existante.",
+      `Mission: ${objective}`,
+      "",
+      "2) CONTEXTE EXISTANT",
+      `- Type: ${e.existingUI ? "app existante" : "nouveau projet"}`,
+      `- Sous-type: ${draft.subtype}`,
+      `- État initial: ${e.existingUI ? "base déjà en place" : "à créer"}`,
+      "",
+      "3) CONTRAINTES ABSOLUES",
+      constraints,
+      "",
+      "4) OBJECTIFS DÉTAILLÉS",
+      "- Implémenter uniquement ce qui sert l'objectif principal.",
+      "- Transformer les termes vagues en critères concrets.",
+      "- Garantir robustesse logique + messages d'erreur clairs.",
+      "",
+      "5) COMPORTEMENTS ATTENDUS",
+      "- Poser hypothèses explicites si infos manquantes.",
+      "- Prioriser questions critiques puis secondaires.",
+      "- Éviter les changements non demandés.",
+      "",
+      "6) ARCHITECTURE SOUHAITÉE",
+      "- Modules séparés: analyse, questions, scoring, génération, recommandations.",
+      "- Code maintenable et extensible.",
+      "",
+      "7) PERSISTANCE",
+      "- Sauvegarder progression, réponses, dernier projet, mode profondeur, dernier outil.",
+      "",
+      "8) COMPATIBILITÉ",
+      `- Plateformes: ${e.targetPlatforms.join(", ") || "web standard"}`,
+      "",
+      "9) LIVRABLES",
+      "- Prompt court, prompt pro, prompt XL, prompt technique, variante alternative.",
+      "- Résumé projet + checklist validation.",
+      "",
+      "10) VALIDATIONS",
+      "- Vérifier non-régression UI, cohérence contraintes, absence de contradictions.",
+      "",
+      "11) CRITÈRES DE RÉUSSITE",
+      "- Prompt actionnable, précis, copiable, sans ambiguïté majeure.",
+      "",
+      "12) BONUS FACULTATIFS",
+      "- Ajouter boosters recommandés et exemples guidés.",
+      "",
+      "13) RÉSUMÉ FINAL",
+      `${detailBoost} ${technicalBonus}`
+    ].join("\n"));
+  }
+
+  function soraSections(draft, level) {
+    const e = draft.extractedInfo;
+    const detail = level === "short" ? "Prompt compact, très lisible." : "Prompt riche cinématique, cohérence visuelle stricte.";
+    const technical = level === "technical" ? "Inclure focale, tempo de coupe, profondeur de champ, exclusions strictes." : "";
+    return sanitizePrompt([
+      "1) SUJET PRINCIPAL",
+      e.objective || draft.userRawDescription,
+      "",
+      "2) DÉCOR",
+      "Décrire lieu, textures, échelle, éléments de fond.",
+      "",
+      "3) AMBIANCE",
+      "Tonalité émotionnelle et rythme narratif.",
+      "",
+      "4) LUMIÈRE",
+      "Qualité de lumière, direction, contrastes.",
+      "",
+      "5) MÉTÉO",
+      "Conditions atmosphériques cohérentes.",
+      "",
+      "6) MOUVEMENT CAMÉRA",
+      "Travelling/panoramique/drone selon intentions.",
+      "",
+      "7) ÉMOTIONS",
+      "Intentions émotionnelles des personnages ou de la scène.",
+      "",
+      "8) STYLE CINÉMATIQUE",
+      e.visualStyle || "ultra réaliste cinéma",
+      "",
+      "9) DÉTAILS VISUELS FINS",
+      "Micro-textures, reflets, profondeur, particules.",
+      "",
+      "10) COHÉRENCE DE SCÈNE",
+      "Continuité des éléments entre plans.",
+      "",
+      "11) NIVEAU DE RÉALISME",
+      "Photorealistic high fidelity.",
+      "",
+      "12) FORMAT / DURÉE",
+      `${e.duration || "20-30s"}, format à confirmer`,
+      "",
+      "13) EXCLUSIONS",
+      "No watermark, no text overlay, no glitch artifacts.",
+      "",
+      "Synthèse:",
+      `${detail} ${technical}`
+    ].join("\n"));
   }
 
   function promptComposer(draft, level) {
     const target = draft.toolTarget === TOOL_TARGETS.UNKNOWN ? TOOL_TARGETS.CODEX : draft.toolTarget;
-    const full = target === TOOL_TARGETS.SORA ? buildSoraPrompt(draft, level) : buildCodexPrompt(draft, level);
-    return normalizePrompt(full);
+    const normalizedLevel = level === "simple" ? "short" : level;
+    return target === TOOL_TARGETS.SORA ? soraSections(draft, normalizedLevel) : codexSections(draft, normalizedLevel);
   }
 
-  function normalizePrompt(text) {
-    return String(text || "").replace(/\n{3,}/g, "\n\n").trim();
+  function computeHeuristicScores(draft) {
+    const text = normalize(draft.finalPrompt || draft.promptVariants.full || "");
+    const isSora = (draft.toolTarget === TOOL_TARGETS.SORA);
+    const checks = {
+      objective: /mission|objectif|sujet principal/.test(text),
+      measurable: /critères de réussite|mesurable|score/.test(text),
+      constraints: /contraintes/.test(text),
+      platform: /compatibilité|plateformes|format/.test(text),
+      forbidden: /interdit|no watermark|ne jamais modifier/.test(text),
+      initialState: /état initial|app existante|nouveau projet/.test(text),
+      finalState: /résumé final|synthèse/.test(text),
+      outputFormat: /livrables|prompt court|storyboard/.test(text),
+      detailCoherence: text.length > 500,
+      ambiguityHandling: /hypothèse|clarification/.test(text),
+      toolFit: isSora ? /caméra|lumière|décor/.test(text) : /architecture|tests|modulaire/.test(text),
+      actionable: /implémenter|ajouter|vérifier/.test(text)
+    };
+
+    const detailed = KNOWLEDGE_PACK.promptHeuristics.map((h) => ({ ...h, score: checks[h.key] ? h.weight : 0 }));
+    const global = Math.min(100, detailed.reduce((sum, d) => sum + d.score, 0));
+    return { global, detailed, checks };
   }
 
   function qualityScorer(draft) {
-    const prompt = draft.finalPrompt || "";
-    const lengthScore = Math.min(25, Math.floor(prompt.length / 45));
-    const clarity = prompt.includes("MISSION") || prompt.includes("SUJET") ? 20 : 10;
-    const completeness = 20 - Math.min(10, draft.missingQuestions.length * 2) + Math.min(5, (draft.answers ? Object.keys(draft.answers).length : 0));
-    const executionReadiness = /test|validation|critères|contraintes/i.test(prompt) ? 20 : 10;
-    const ambiguityRisk = Math.max(0, 20 - (draft.parsedIntent.ambiguityRisks.length * 3));
-    const contextualRichness = Math.min(15, Math.floor((draft.extractedInfo.targetPlatforms.length + (draft.extractedInfo.uiLock ? 2 : 0)) * 4));
-    const global = Math.max(0, Math.min(100, lengthScore + clarity + completeness + executionReadiness + ambiguityRisk + contextualRichness));
-    return { global, clarity, completeness, executionReadiness, ambiguityRisk };
+    const heur = computeHeuristicScores(draft);
+    const clarity = Math.min(20, heur.checks.objective ? 18 : 9);
+    const depth = Math.min(20, heur.checks.detailCoherence ? 17 : 8);
+    const context = Math.min(15, heur.checks.initialState ? 13 : 6);
+    const actionable = Math.min(15, heur.checks.actionable ? 13 : 6);
+    const ambiguityRisk = Math.max(0, 15 - (draft.parsedIntent.ambiguityRisks.length * 3));
+    const constraintsRichness = Math.min(15, heur.checks.constraints ? 13 : 6);
+    const toolFit = Math.min(15, heur.checks.toolFit ? 13 : 5);
+    return {
+      global: heur.global,
+      clarity,
+      depth,
+      context,
+      actionable,
+      ambiguityRisk,
+      constraintsRichness,
+      toolFit,
+      detailed: heur.detailed
+    };
   }
 
   function upgradeSuggestions(draft) {
     const suggestions = [];
-    if (!draft.extractedInfo.uiLock && draft.toolTarget === TOOL_TARGETS.CODEX) suggestions.push("Préciser explicitement si le UI est verrouillé.");
-    if (!draft.extractedInfo.offlineRequired) suggestions.push("Confirmer l'exigence offline-first.");
-    if (!/test/i.test(draft.userRawDescription)) suggestions.push("Ajouter les tests attendus (manuels/automatisés). ");
-    const weak = detectWeakWords(draft.userRawDescription);
-    if (weak.length) suggestions.push(`Mots flous détectés (${weak.join(", ")}) : préciser 2-3 critères mesurables.`);
-    if (draft.toolTarget === TOOL_TARGETS.SORA) suggestions.push("Ajouter lumière, météo, caméra et continuité visuelle pour renforcer la qualité vidéo.");
+    const target = draft.toolTarget === TOOL_TARGETS.UNKNOWN ? TOOL_TARGETS.CODEX : draft.toolTarget;
+    if (target === TOOL_TARGETS.CODEX && !draft.extractedInfo.uiLock) suggestions.push("Préciser explicitement si le UI est verrouillé.");
+    if (!draft.extractedInfo.offlineRequired && target === TOOL_TARGETS.CODEX) suggestions.push("Confirmer l'exigence offline-first.");
+    if (!/test/i.test(draft.userRawDescription) && target === TOOL_TARGETS.CODEX) suggestions.push("Ajouter tests logiques finaux attendus.");
+    if (target === TOOL_TARGETS.SORA) suggestions.push("Ajouter lumière, météo, caméra et continuité visuelle.");
+    expandWeakWords(draft.userRawDescription).slice(0, 5).forEach((item) => suggestions.push(`"${item.source}" → ${item.concrete}`));
     return suggestions;
   }
 
+  function finalRecommendations(draft) {
+    const missing = draft.missingQuestions.slice(0, 3).map((m) => m.key).join(", ");
+    const top = (draft.suggestions || []).slice(0, 3).join(" | ");
+    return {
+      missing: missing || "aucun manque critique",
+      recommendation: top || "continuer avec la version pro",
+      boost: "Ton prompt sera plus fort si on précise les critères de réussite et le format de sortie."
+    };
+  }
+
   function buildReasoningSummary(draft) {
+    const rec = finalRecommendations(draft);
     return [
       `Cible détectée: ${draft.toolTarget}`,
       `Objectif compris: ${draft.extractedInfo.objective || "à clarifier"}`,
-      `Zones floues restantes: ${draft.missingQuestions.map((x) => x.key).join(", ") || "aucune majeure"}`,
+      `Zones floues restantes: ${rec.missing}`,
       `Niveau de précision: ${draft.parsedIntent.precisionLevel}`,
-      `Recommandations: ${(draft.suggestions || []).slice(0, 3).join(" | ") || "continuer la collecte d'informations"}`
+      `Je recommande d'ajouter: ${rec.recommendation}`,
+      rec.boost
     ].join("\n");
   }
 
-  function createDraft(rawDescription) {
+  function buildChecklist(target, draft) {
+    const src = normalize(draft.finalPrompt || "");
+    if (target === TOOL_TARGETS.SORA) {
+      const items = [
+        ["décor clair", /décor/.test(src)], ["ambiance claire", /ambiance/.test(src)], ["lumière claire", /lumière/.test(src)],
+        ["mouvement caméra présent", /caméra|drone|travelling/.test(src)], ["émotion présente", /émotion/.test(src)],
+        ["réalisme défini", /réalisme|photorealistic/.test(src)], ["style défini", /style/.test(src)]
+      ];
+      return items;
+    }
+    const items = [
+      ["objectif clair", /mission|objectif/.test(src)], ["contraintes nommées", /contraintes/.test(src)], ["UI protégé", /ui/.test(src)],
+      ["offline mentionné", /offline/.test(src)], ["plateforme mentionnée", /plateforme|compatibilité/.test(src)],
+      ["format de sortie mentionné", /livrables|sortie/.test(src)], ["validations incluses", /validation/.test(src)], ["test final inclus", /test/.test(src)]
+    ];
+    return items;
+  }
+
+  function strengthenPrompt(text, option, target) {
+    const map = {
+      "Rendre plus précis": "Ajoute des critères mesurables et des seuils de validation.",
+      "Rendre plus technique": "Ajoute structures techniques, signatures et stratégie de tests.",
+      "Rendre plus créatif": target === TOOL_TARGETS.SORA ? "Ajoute métaphores visuelles, transitions originales." : "Ajoute alternatives d'implémentation innovantes.",
+      "Rendre plus puissant": "Ajoute edge cases, fallback et mécanismes robustes.",
+      "Rendre plus vendable": "Ajoute bénéfices utilisateur et valeur métier.",
+      "Rendre plus cinématique": "Ajoute focales, mouvements caméra, étalonnage, continuité de plans.",
+      "Rendre plus clair pour Codex": "Clarifie sections mission/contraintes/livrables/tests.",
+      "Rendre plus visuel pour Sora": "Renforce décor, lumière, textures et dynamique émotionnelle."
+    };
+    return sanitizePrompt(`${text}\n\nRENFORCEMENT: ${option}. ${map[option] || ""}`);
+  }
+
+  function composeAllVariants(draft) {
+    const target = draft.toolTarget === TOOL_TARGETS.UNKNOWN ? TOOL_TARGETS.CODEX : draft.toolTarget;
+    draft.promptVariants.short = promptComposer(draft, "short");
+    draft.promptVariants.full = promptComposer(draft, "pro");
+    draft.promptVariants.xl = promptComposer(draft, "xl");
+    draft.promptVariants.technical = promptComposer(draft, "technical");
+    draft.promptVariants.alternative = strengthenPrompt(draft.promptVariants.full, target === TOOL_TARGETS.SORA ? "Rendre plus cinématique" : "Rendre plus puissant", target);
+    draft.projectSummary = buildReasoningSummary(draft);
+    draft.finalPrompt = draft.promptVariants.full;
+    draft.score = qualityScorer(draft);
+    draft.checklist = buildChecklist(target, draft);
+    return draft;
+  }
+
+  function exportModule(draft) {
+    const target = draft.toolTarget === TOOL_TARGETS.UNKNOWN ? TOOL_TARGETS.CODEX : draft.toolTarget;
+    const checklist = buildChecklist(target, draft).map(([label, ok]) => `- [${ok ? "x" : " "}] ${label}`).join("\n");
+    return {
+      final: draft.finalPrompt,
+      short: draft.promptVariants.short,
+      pro: draft.promptVariants.full,
+      xl: draft.promptVariants.xl,
+      technical: draft.promptVariants.technical,
+      alternative: draft.promptVariants.alternative,
+      summary: draft.projectSummary,
+      checklist
+    };
+  }
+
+  function answerQuestion(draft, key, answer) {
+    draft.answers[key] = answer;
+    draft.history.push({ at: new Date().toISOString(), key, answer });
+    draft.updatedAt = new Date().toISOString();
+    return draft;
+  }
+
+  function createDraft(rawDescription, options) {
     const parsedIntent = intentClassifier(rawDescription);
     const extractedInfo = infoExtractor(rawDescription);
+    const depthMode = options && options.depthMode ? options.depthMode : "standard";
     const draft = {
       id: `draft_${Date.now()}`,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       toolTarget: parsedIntent.toolTarget,
       subtype: parsedIntent.subtype,
-      userRawDescription: rawDescription,
+      userRawDescription: String(rawDescription || ""),
       parsedIntent,
       extractedInfo,
+      depthMode,
       answers: {},
       missingQuestions: [],
       suggestedQuestions: [],
+      suggestedBlocks: [],
       finalPrompt: "",
-      promptVariants: { short: "", full: "", xl: "", technical: "" },
-      score: { global: 0, clarity: 0, completeness: 0, executionReadiness: 0, ambiguityRisk: 0 },
+      promptVariants: { short: "", full: "", xl: "", technical: "", alternative: "" },
+      outputEngine: { short: "", pro: "", xl: "", technical: "", alternative: "", summary: "", checklist: "" },
+      score: { global: 0 },
+      suggestions: [],
+      recommendations: {},
       history: [],
       tags: []
     };
+
     draft.missingQuestions = missingInfoEngine(draft);
     draft.suggestedQuestions = adaptiveQuestionFlow(draft);
+    draft.suggestedBlocks = [...new Set(draft.suggestedQuestions.map((q) => q.key))];
     draft.suggestions = upgradeSuggestions(draft);
+    applyAssumptions(draft);
+    draft.recommendations = finalRecommendations(draft);
+    draft.reasoningSummary = buildReasoningSummary(draft);
     return draft;
-  }
-
-  function answerQuestion(draft, key, answer) {
-    draft.answers[key] = answer;
-    draft.updatedAt = new Date().toISOString();
-    return draft;
-  }
-
-  function composeAllVariants(draft) {
-    draft.promptVariants.short = promptComposer(draft, "simple");
-    draft.promptVariants.full = promptComposer(draft, "pro");
-    draft.promptVariants.xl = promptComposer(draft, "xl");
-    draft.promptVariants.technical = promptComposer(draft, "technical");
-    draft.finalPrompt = draft.promptVariants.full;
-    draft.score = qualityScorer(draft);
-    return draft;
-  }
-
-  function exportModule(draft) {
-    return {
-      final: draft.finalPrompt,
-      short: draft.promptVariants.short,
-      xl: draft.promptVariants.xl,
-      technical: draft.promptVariants.technical,
-      checklist: `Checklist\n- Objectif précis\n- Contraintes explicites\n- Tests/validation\n- Risques`,
-      faq: `FAQ\nQ: UI modifié ?\nR: Non si verrouillé.\nQ: Offline ?\nR: Logique locale prioritaire.`
-    };
   }
 
   return {
     TOOL_TARGETS,
-    codexQuestionBank,
-    soraQuestionBank,
-    promptTemplates: {},
-    validatorRules: { weakWords },
-    suggestionRules: {},
-    examplesLibrary,
-    presetLibrary,
+    knowledgePack: KNOWLEDGE_PACK,
+    questionModes: QUESTION_MODES,
+    detectWeakWords,
+    expandWeakWords,
     intentClassifier,
     infoExtractor,
     missingInfoEngine,
@@ -305,6 +642,6 @@
     composeAllVariants,
     answerQuestion,
     exportModule,
-    detectWeakWords
+    strengthenPrompt
   };
 });

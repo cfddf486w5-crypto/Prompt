@@ -13,22 +13,40 @@ function run() {
   assert.strictEqual(info.offlineRequired, true);
   assert.ok(info.targetPlatforms.includes('iPhone'));
 
-  const draft = engine.createDraft('Ajoute un moteur IA à une app existante sans toucher au UI, offline et localStorage.');
+  const draft = engine.createDraft('Ajoute un moteur IA à une app existante sans toucher au UI, offline et localStorage.', { depthMode: 'expert' });
   assert.ok(Array.isArray(draft.missingQuestions));
   assert.ok(Array.isArray(draft.suggestedQuestions));
+  assert.ok(draft.suggestedQuestions.length <= engine.questionModes.expert.questionLimit);
 
   engine.composeAllVariants(draft);
-  assert.ok(draft.promptVariants.short.length > 10);
-  assert.ok(draft.promptVariants.xl.length > 10);
+  assert.ok(draft.promptVariants.short.includes('RÔLE / MISSION'));
+  assert.ok(draft.promptVariants.xl.length > draft.promptVariants.short.length);
+  assert.ok(draft.promptVariants.technical.includes('VALIDATIONS'));
+  assert.ok(draft.promptVariants.alternative.includes('RENFORCEMENT'));
   assert.ok(draft.score.global > 0);
+  assert.ok(Array.isArray(draft.checklist));
 
   const exported = engine.exportModule(draft);
   assert.ok(exported.final !== undefined);
-  assert.ok(exported.checklist.includes('Checklist'));
+  assert.ok(exported.checklist.includes('- ['));
+  assert.ok(exported.summary.includes('Cible détectée'));
 
-  const weak = engine.detectWeakWords('je veux un prompt pro, beau et moderne');
+  const weak = engine.detectWeakWords('je veux un prompt pro, complet et intelligent');
   assert.ok(weak.includes('pro'));
-  assert.ok(weak.includes('beau'));
+  assert.ok(weak.includes('complet'));
+  const expanded = engine.expandWeakWords('pro et intelligent');
+  assert.ok(expanded.length >= 4);
+
+  const soraDraft = engine.createDraft('Mini film romantique overland ultra réaliste avec caméra drone et storyboard.', { depthMode: 'ultra' });
+  soraDraft.toolTarget = engine.TOOL_TARGETS.SORA;
+  engine.composeAllVariants(soraDraft);
+  assert.ok(soraDraft.promptVariants.full.includes('MOUVEMENT CAMÉRA'));
+
+  const boosted = engine.strengthenPrompt('Base', 'Rendre plus technique', engine.TOOL_TARGETS.CODEX);
+  assert.ok(boosted.includes('RENFORCEMENT'));
+
+  assert.ok(engine.knowledgePack.codexBestPractices.length >= 10);
+  assert.ok(engine.knowledgePack.examples.codex.length >= 3);
 
   console.log('All prompt-engine tests passed.');
 }
