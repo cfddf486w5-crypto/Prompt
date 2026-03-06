@@ -81,17 +81,20 @@ function renderIaConversation(conversation) {
   });
 }
 
-function renderIaRecommendations() {
+function renderIaRecommendations(options = {}) {
   const wrap = $("#iaRecommendations");
   if (!wrap || !iaEngine) return;
-  const brief = $("#iaBrief")?.value || "";
+  const brief = options.message !== undefined ? options.message : ($("#iaBrief")?.value || "");
   let conversation = iaConversationState();
 
   if (!conversation || !(conversation.messages || []).length) {
-    conversation = iaEngine.createConversationState(brief);
-    if (brief) conversation = iaEngine.continueConversation(conversation, brief);
-  } else if (brief) {
+    conversation = iaEngine.createConversationState("");
+  }
+
+  if (brief) {
     conversation = iaEngine.continueConversation(conversation, brief);
+  } else if (options.nudge && iaEngine.nudgeConversation) {
+    conversation = iaEngine.nudgeConversation(conversation);
   }
 
   conversation.structuredPrompt.toolTarget = $("#iaMode")?.value || conversation.structuredPrompt.toolTarget;
@@ -1262,14 +1265,16 @@ function wireEvents() {
   $("#btnDebugExport")?.addEventListener("click", exportDebug);
 
   $("#btnIaAnalyze")?.addEventListener("click", () => {
-    renderIaRecommendations();
+    const message = $("#iaBrief")?.value || "";
+    renderIaRecommendations({ message });
     $("#iaBrief").value = "";
     toast("Message envoyé ✅");
   });
   $("#iaBrief")?.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      renderIaRecommendations();
+      const message = $("#iaBrief")?.value || "";
+      renderIaRecommendations({ message });
       $("#iaBrief").value = "";
     }
   });
@@ -1280,7 +1285,7 @@ function wireEvents() {
     toast("Question suivante proposée ✅");
   });
   $("#btnIaContinue")?.addEventListener("click", () => {
-    renderIaRecommendations();
+    renderIaRecommendations({ nudge: true });
     toast("Discussion poursuivie ✅");
   });
   $("#btnIaGenerate")?.addEventListener("click", () => {
