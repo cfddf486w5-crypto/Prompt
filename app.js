@@ -62,149 +62,93 @@ function activeIaDraft() {
   return state.iaDraft || loadIaDraft();
 }
 
+function iaConversationState() {
+  if (!iaEngine) return null;
+  const fallback = iaEngine.createConversationState("");
+  const draft = activeIaDraft();
+  return draft && draft.structuredPrompt ? draft : fallback;
+}
+
+function renderIaConversation(conversation) {
+  const wrap = $("#iaConversation");
+  if (!wrap || !conversation) return;
+  wrap.innerHTML = "";
+  (conversation.messages || []).forEach((msg) => {
+    const div = document.createElement("div");
+    div.className = `ia-msg ${msg.role === "user" ? "user" : "assistant"}`;
+    div.textContent = msg.text;
+    wrap.appendChild(div);
+  });
+}
+
 function renderIaRecommendations() {
   const wrap = $("#iaRecommendations");
   if (!wrap || !iaEngine) return;
   const brief = $("#iaBrief")?.value || "";
-  const draft = iaEngine.createDraft(brief);
-  if ($("#iaMode")?.value) draft.toolTarget = $("#iaMode").value;
-  draft.missingQuestions = iaEngine.missingInfoEngine(draft);
-  draft.suggestedQuestions = iaEngine.adaptiveQuestionFlow(draft);
-  draft.suggestions = iaEngine.upgradeSuggestions(draft);
-  draft.reasoningSummary = iaEngine.buildReasoningSummary(draft);
-  state.iaDraft = draft;
-  saveIaDraft(draft);
+  let conversation = iaConversationState();
+
+  if (!conversation || !(conversation.messages || []).length) {
+    conversation = iaEngine.createConversationState(brief);
+    if (brief) conversation = iaEngine.continueConversation(conversation, brief);
+  } else if (brief) {
+    conversation = iaEngine.continueConversation(conversation, brief);
+  }
+
+  conversation.structuredPrompt.toolTarget = $("#iaMode")?.value || conversation.structuredPrompt.toolTarget;
+  conversation.structuredPrompt.levelOfDetail = $("#iaDepth")?.value || conversation.structuredPrompt.levelOfDetail;
+  conversation.structuredPrompt.missingFields = iaEngine.computeMissingFields(conversation.structuredPrompt);
+  conversation.maturity = iaEngine.maturityFromMissing(conversation.structuredPrompt.missingFields);
+
+  state.iaDraft = conversation;
+  saveIaDraft(conversation);
+
+  renderIaConversation(conversation);
 
   wrap.innerHTML = "";
-  const summary = document.createElement("div");
-  summary.className = "item";
-  summary.innerHTML = `<div class="item-title">Analyse intelligente</div><div class="item-meta">${escapeHtml(draft.reasoningSummary).replaceAll("\n", "<br>")}</div>`;
-  wrap.appendChild(summary);
+  const q = document.createElement("div");
+  q.className = "item";
+  q.innerHTML = `<div class="item-title">Question suivante</div><div class="item-meta">${escapeHtml(conversation.nextQuestion?.question || "Aucune question bloquante")}</div>`;
+  wrap.appendChild(q);
 
-  draft.suggestedQuestions.forEach((rec, idx) => {
-    const item = document.createElement("label");
-    item.className = "item recommendation-item";
-    item.innerHTML = `<span class="recommendation-rank">Q${idx + 1}</span><input type="radio" name="iaReco" value="${escapeHtml(rec.key)}" ${idx === 0 ? "checked" : ""} /><div><div class="item-title">${escapeHtml(rec.question)}</div><div class="item-meta">Priorité: ${escapeHtml(rec.priority)}</div></div>`;
+  (conversation.suggestions || []).forEach((text) => {
+    const item = document.createElement("div");
+    item.className = "item";
+    item.innerHTML = `<div class="item-title">Suggestion intelligente</div><div class="item-meta">${escapeHtml(text)}</div>`;
     wrap.appendChild(item);
   });
 
-  if (draft.suggestions.length) {
-    const sug = document.createElement("div");
-    sug.className = "item";
-    sug.innerHTML = `<div class="item-title">Améliorations proposées</div><div class="item-meta">${escapeHtml(draft.suggestions.join(" • "))}</div>`;
-    wrap.appendChild(sug);
-  }
-
-  const memory = loadIaDraft();
-  const memoryMeta = document.createElement("div");
-  const prevCount = memory?.generationHistory?.length || 0;
-  const favCount = memory?.favorites?.length || 0;
-  const presetCount = memory?.presets?.length || 0;
-  memoryMeta.className = "item";
-  memoryMeta.innerHTML = `<div class="item-title">Mémoire locale</div><div class="item-meta">Historique récent: ${prevCount} · Favoris: ${favCount} · Presets: ${presetCount}</div>`;
-  wrap.appendChild(memoryMeta);
+  const collected = $("#iaCollected");
+  if (collected) collected.textContent = JSON.stringify(conversation.structuredPrompt, null, 2);
+  const missing = $("#iaMissing");
+  if (missing) missing.textContent = conversation.structuredPrompt.missingFields.length ? conversation.structuredPrompt.missingFields.join(", ") : "Aucune information critique manquante.";
+  const label = $("#iaMaturityLabel");
+  if (label) label.textContent = `${conversation.maturity.label} (${conversation.maturity.score}%)`;
+  const bar = $("#iaMaturityBar");
+  if (bar) bar.style.width = `${conversation.maturity.score}%`;
 }
 
-function generateIaPrompt() {
+function generateIaPrompt(variant) {
   if (!iaEngine) return;
-  const draft = activeIaDraft() || iaEngine.createDraft($("#iaBrief")?.value || "");
-  const selectedKey = document.querySelector('input[name="iaReco"]:checked')?.value;
-  const selectedQuestion = (draft.suggestedQuestions || []).find((q) => q.key === selectedKey);
-  if (selectedQuestion) iaEngine.answerQuestion(draft, selectedQuestion.key, "à préciser / répondre plus tard");
+  const conversation = iaConversationState();
+  if (!conversation) return;
 
-  draft.toolTarget = $("#iaMode")?.value || draft.toolTarget;
-  draft.extractedInfo.tone = $("#iaTone")?.value || draft.extractedInfo.tone;
-  draft.extractedInfo.outputLength = $("#iaDepth")?.value || draft.extractedInfo.outputLength;
-  draft.extractedInfo.deliveryFormat = $("#iaOutput")?.value || draft.extractedInfo.deliveryFormat;
+  conversation.structuredPrompt.toolTarget = $("#iaMode")?.value || conversation.structuredPrompt.toolTarget;
+  conversation.structuredPrompt.levelOfDetail = $("#iaDepth")?.value || conversation.structuredPrompt.levelOfDetail;
+  const finalized = iaEngine.generateFinalPromptSet(conversation);
 
-  iaEngine.composeAllVariants(draft);
-  const exported = iaEngine.exportModule(draft);
-  const modeA = $("#iaMode")?.value || "codex";
-  const modeB = $("#iaMode2")?.value || "sora";
-  const contradictions = (exported.contradictions || []).length ? exported.contradictions.join("\n- ") : "Aucune contradiction détectée";
-  const examples = (exported.examples || []).map((e, idx) => `${idx + 1}. ${e}`).join("\n") || "Aucun exemple disponible";
-  const variantsBatch = (draft.promptVariants.batch || []).map((v, idx) => `VARIANTE ${idx + 1}\n${v}`).join("\n\n");
+  const version = variant || "detailed";
+  const map = {
+    short: finalized.finalVariants.short,
+    detailed: finalized.finalVariants.detailed,
+    ultra: finalized.finalVariants.ultra
+  };
 
-  const final = normalizeSpaces(`PROMPT ASSISTANT (${modeA.toUpperCase()} + ${modeB.toUpperCase()})
-
-Mode actif
-${draft.generationModeLabel || "mode standard"}
-
-Version finale raffinée
-${draft.finalPrompt}
-
-Version maître
-${draft.promptVariants.master || ""}
-
-Version simple
-${draft.promptVariants.simple || draft.promptVariants.short || ""}
-
-Variantes multi-génération
-${variantsBatch}
-
-Score qualité détaillé: ${draft.score.global}/100
-- Clarté: ${draft.score.clarity}
-- Profondeur: ${draft.score.depth}
-- Contexte: ${draft.score.context}
-- Complétude: ${draft.score.completeness}
-- Exécution: ${draft.score.executionReadiness}
-- Actionnable: ${draft.score.actionable}
-- Richesse contraintes: ${draft.score.constraintsRichness}
-- Adéquation outil: ${draft.score.toolFit}
-- Risque ambiguïté: ${draft.score.ambiguityRisk}
-
-Détection contradictions
-- ${contradictions}
-
-Suggestions de renforcement
-- ${(draft.suggestions || []).join("\n- ")}
-
-Exemples inspirants
-${examples}
-
-Checklist projet
-${exported.checklist}
-
-Résumé projet
-${exported.summary}
-
-FAQ
-${exported.faq}`);
-
-  draft.finalPrompt = final;
-  draft.history = draft.history || [];
-  draft.history.unshift({ at: nowISO(), toolTarget: draft.toolTarget, score: draft.score.global, mode: draft.generationMode, prompt: draft.promptVariants.full });
-  draft.history = draft.history.slice(0, 30);
-  draft.favorites = draft.favorites || [];
-  const favoriteKey = quickHash(`${draft.toolTarget}|${draft.extractedInfo.tone}|${draft.extractedInfo.outputLength}|${draft.extractedInfo.deliveryFormat}|${draft.generationMode}`);
-  if (!draft.favorites.find((f) => f.key === favoriteKey)) {
-    draft.favorites.unshift({
-      key: favoriteKey,
-      label: `${draft.toolTarget.toUpperCase()} · ${draft.generationModeLabel}`,
-      tone: draft.extractedInfo.tone,
-      depth: draft.extractedInfo.outputLength,
-      output: draft.extractedInfo.deliveryFormat,
-      mode: draft.generationMode
-    });
-    draft.favorites = draft.favorites.slice(0, 12);
-  }
-  draft.presets = draft.presets || [];
-  draft.presets.unshift({
-    id: uid("iapreset"),
-    at: nowISO(),
-    target: draft.toolTarget,
-    tone: draft.extractedInfo.tone,
-    outputLength: draft.extractedInfo.outputLength,
-    deliveryFormat: draft.extractedInfo.deliveryFormat,
-    mode: draft.generationMode
-  });
-  draft.presets = draft.presets.slice(0, 20);
-  draft.updatedAt = nowISO();
-  saveIaDraft(draft);
-  state.iaDraft = draft;
-  $("#iaFinalPrompt").value = final;
+  finalized.finalPrompt = map[version] || finalized.finalVariants.detailed;
+  state.iaDraft = finalized;
+  saveIaDraft(finalized);
+  $("#iaFinalPrompt").value = finalized.finalPrompt;
+  renderIaRecommendations();
 }
-
 function uid(prefix = "id") {
   return `${prefix}_${Math.random().toString(36).slice(2, 9)}_${Date.now().toString(36)}`;
 }
@@ -1269,22 +1213,65 @@ function wireEvents() {
 
   $("#btnIaAnalyze")?.addEventListener("click", () => {
     renderIaRecommendations();
-    toast("IA: analyse complète prête ✅");
+    $("#iaBrief").value = "";
+    toast("Message envoyé ✅");
   });
-  $("#iaBrief")?.addEventListener("input", debounce(() => {
-    const current = activeIaDraft() || (iaEngine ? iaEngine.createDraft($("#iaBrief").value || "") : null);
-    if (current) {
-      current.userRawDescription = $("#iaBrief").value || "";
-      current.updatedAt = nowISO();
-      saveIaDraft(current);
-      state.iaDraft = current;
+  $("#iaBrief")?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      renderIaRecommendations();
+      $("#iaBrief").value = "";
     }
-  }, 250));
-  $("#btnIaGenerate")?.addEventListener("click", () => {
-    generateIaPrompt();
-    toast("Prompt IA généré ✅");
   });
+  $("#btnIaNext")?.addEventListener("click", () => {
+    const c = iaConversationState();
+    if (!c?.nextQuestion?.question) return;
+    $("#iaBrief").value = c.nextQuestion.question;
+    toast("Question suivante proposée ✅");
+  });
+  $("#btnIaContinue")?.addEventListener("click", () => {
+    renderIaRecommendations();
+    toast("Discussion poursuivie ✅");
+  });
+  $("#btnIaGenerate")?.addEventListener("click", () => {
+    generateIaPrompt("detailed");
+    toast("Prompt final généré ✅");
+  });
+  $("#btnIaImprove")?.addEventListener("click", () => {
+    const c = iaConversationState();
+    if (!c) return;
+    const revised = iaEngine.reviseConversationPrompt(c, "rends ça plus pro et détaillé");
+    state.iaDraft = revised;
+    saveIaDraft(revised);
+    $("#iaFinalPrompt").value = revised.finalVariants.ultra || revised.finalPrompt;
+    renderIaRecommendations();
+    toast("Prompt amélioré ✅");
+  });
+  $("#btnIaRegenerate")?.addEventListener("click", () => {
+    generateIaPrompt("detailed");
+    toast("Prompt régénéré ✅");
+  });
+  $("#btnIaVariantShort")?.addEventListener("click", () => generateIaPrompt("short"));
+  $("#btnIaVariantLong")?.addEventListener("click", () => generateIaPrompt("detailed"));
+  $("#btnIaVariantUltra")?.addEventListener("click", () => generateIaPrompt("ultra"));
   $("#btnIaCopy")?.addEventListener("click", () => copyText($("#iaFinalPrompt").value).then(() => toast("Prompt IA copié ✅")));
+  $("#btnIaExport")?.addEventListener("click", () => {
+    const c = iaConversationState();
+    const payload = JSON.stringify({ exportedAt: nowISO(), conversation: c }, null, 2);
+    downloadFile(`prompt-conversation-${Date.now()}.json`, payload, "application/json");
+    toast("Export IA effectué ✅");
+  });
+  $("#btnIaReset")?.addEventListener("click", () => {
+    state.iaDraft = iaEngine ? iaEngine.createConversationState("") : null;
+    saveIaDraft(state.iaDraft);
+    if ($("#iaConversation")) $("#iaConversation").innerHTML = "";
+    if ($("#iaFinalPrompt")) $("#iaFinalPrompt").value = "";
+    if ($("#iaCollected")) $("#iaCollected").textContent = "{}";
+    if ($("#iaMissing")) $("#iaMissing").textContent = "Aucune donnée.";
+    toast("Conversation IA réinitialisée ✅");
+  });
+  $("#btnIaShowInfo")?.addEventListener("click", () => renderIaRecommendations());
+  $("#btnIaShowMissing")?.addEventListener("click", () => renderIaRecommendations());
 
   $("#btnProjectPresetSave")?.addEventListener("click", () => {
     const p = activeProject();
@@ -1321,10 +1308,14 @@ function init() {
   $("#toolKind").value = state.settings.defaultType || "codex";
   wireEvents();
   renderAll();
-  if (state.iaDraft?.userRawDescription && $("#iaBrief")) {
-    $("#iaBrief").value = state.iaDraft.userRawDescription;
-    if ($("#iaFinalPrompt") && state.iaDraft.finalPrompt) $("#iaFinalPrompt").value = state.iaDraft.finalPrompt;
+  if (state.iaDraft?.finalPrompt && $("#iaFinalPrompt")) {
+    $("#iaFinalPrompt").value = state.iaDraft.finalPrompt;
   }
+  if (iaEngine && (!state.iaDraft || !state.iaDraft.structuredPrompt)) {
+    state.iaDraft = iaEngine.createConversationState("");
+    saveIaDraft(state.iaDraft);
+  }
+  renderIaRecommendations();
   buildPrompt();
 }
 
