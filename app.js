@@ -4,7 +4,8 @@
 const LS_KEYS = {
   templates: "pb_templates_v1",
   history: "pb_history_v1",
-  settings: "pb_settings_v1"
+  settings: "pb_settings_v1",
+  draft: "pb_draft_v1"
 };
 
 const $ = (sel) => document.querySelector(sel);
@@ -215,6 +216,53 @@ function normalizeSpaces(s){
     .trim();
 }
 
+function getDraftFromUI(){
+  return {
+    toolKind: $("#toolKind").value,
+    templateId: activeTemplateId(),
+    goal: $("#goal").value,
+    context: $("#context").value,
+    inputs: $("#inputs").value,
+    rules: $("#rules").value,
+    steps: $("#steps").value,
+    outputFormat: $("#outputFormat").value,
+    finalPrompt: $("#finalPrompt").value
+  };
+}
+
+function saveDraft(){
+  localStorage.setItem(LS_KEYS.draft, JSON.stringify(getDraftFromUI()));
+}
+
+function loadDraft(){
+  return safeJSONParse(localStorage.getItem(LS_KEYS.draft), null);
+}
+
+function clearDraft(){
+  localStorage.removeItem(LS_KEYS.draft);
+}
+
+function restoreDraftIfAny(){
+  const draft = loadDraft();
+  if(!draft) return false;
+
+  const templates = loadTemplates();
+  if(draft.toolKind) $("#toolKind").value = draft.toolKind;
+
+  if(draft.templateId && templates.some(t => t.id === draft.templateId)){
+    $("#templateSelect").value = draft.templateId;
+  }
+
+  $("#goal").value = draft.goal || "";
+  $("#context").value = draft.context || "";
+  $("#inputs").value = draft.inputs || "";
+  $("#rules").value = draft.rules || "";
+  $("#steps").value = draft.steps || "";
+  $("#outputFormat").value = draft.outputFormat || "";
+  $("#finalPrompt").value = draft.finalPrompt || "";
+  return true;
+}
+
 function applyVars(tpl, data, settings){
   const map = {
     GOAL: data.goal || "",
@@ -228,8 +276,7 @@ function applyVars(tpl, data, settings){
     SUJET: settings.vars.SUJET || "",
     STYLE: settings.vars.STYLE || "",
     DUREE: settings.vars.DUREE || "",
-    CONTRAINTES: settings.vars.CONTRAINTES || "",
-    FORMAT2: settings.vars.FORMAT || ""
+    CONTRAINTES: settings.vars.CONTRAINTES || ""
   };
 
   let out = tpl;
@@ -621,6 +668,7 @@ function factoryReset(){
   localStorage.removeItem(LS_KEYS.templates);
   localStorage.removeItem(LS_KEYS.history);
   localStorage.removeItem(LS_KEYS.settings);
+  clearDraft();
   init(); // reload
   toast("Reset complet ✅");
 }
@@ -675,10 +723,12 @@ function init(){
   // builder actions
   $("#btnGenerate").addEventListener("click", ()=>{
     buildPrompt();
+    saveDraft();
     toast("Prompt généré ✅");
   });
   $("#btnReset").addEventListener("click", ()=>{
     ["#goal","#context","#inputs","#rules","#steps","#outputFormat","#finalPrompt"].forEach(sel=>$(sel).value="");
+    clearDraft();
     toast("Réinitialisé");
   });
   $("#btnCopy").addEventListener("click", exportQuickCopy);
@@ -687,6 +737,7 @@ function init(){
   $("#btnExportJson").addEventListener("click", exportJSON);
   $("#btnTidy").addEventListener("click", ()=>{
     $("#finalPrompt").value = normalizeSpaces($("#finalPrompt").value);
+    saveDraft();
     toast("Nettoyé ✅");
   });
 
@@ -695,7 +746,14 @@ function init(){
     const tool = $("#toolKind").value;
     const best = pickDefaultTemplateForTool(templates, tool);
     if(best) $("#templateSelect").value = best;
+    buildPrompt();
+    saveDraft();
     toast(tool.toUpperCase());
+  });
+
+  $("#templateSelect").addEventListener("change", ()=>{
+    buildPrompt();
+    saveDraft();
   });
 
   $("#btnNewFromTemplate").addEventListener("click", ()=>{
@@ -735,8 +793,28 @@ function init(){
   initNav();
   initChips();
 
-  // initial prompt
-  buildPrompt();
+  const draftRestored = restoreDraftIfAny();
+
+  ["#goal", "#context", "#inputs", "#rules", "#steps", "#outputFormat", "#finalPrompt"].forEach(sel=>{
+    $(sel).addEventListener("input", ()=>{
+      clearTimeout(window.__draftTimer);
+      window.__draftTimer = setTimeout(saveDraft, 200);
+    });
+  });
+
+  document.addEventListener("keydown", (e)=>{
+    if((e.ctrlKey || e.metaKey) && e.key === "Enter"){
+      e.preventDefault();
+      buildPrompt();
+      saveDraft();
+      toast("Prompt généré ✅");
+    }
+  });
+
+  if(!draftRestored){
+    // initial prompt
+    buildPrompt();
+  }
 }
 
 document.addEventListener("DOMContentLoaded", init);
