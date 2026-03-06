@@ -310,11 +310,11 @@
 
   <div id="importModal" class="panel" style="display:none; position:fixed; inset:20% 10%; z-index:20;">
     <div class="panel-title">Import JSON</div>
-    <div class="hint">Choisis le mode d'import: fusionner (merge par id) ou remplacer (wipe puis import).</div>
+    <div class="hint">Choisis le mode d'import: fusionner (garde les données existantes) ou remplacer (efface l'existant puis importe).</div>
     <div id="importModeHint" class="small muted" style="margin-top:8px;"></div>
     <div class="row gap" style="margin-top:12px;">
       <button id="btnImportMerge" class="btn btn-secondary">Fusionner</button>
-      <button id="btnImportReplace" class="btn btn-primary">Remplacer</button>
+      <button id="btnImportReplace" class="btn btn-primary" title="Efface les données existantes avant d'importer le fichier">Remplacer tout (effacer + importer)</button>
       <button id="btnImportCancel" class="btn btn-ghost">Annuler</button>
     </div>
   </div>
