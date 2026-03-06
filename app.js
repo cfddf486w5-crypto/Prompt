@@ -42,103 +42,106 @@ const state = {
   activeProjectId: "general",
   soraShots: [],
   pendingImportPayload: null,
-  activePackFilter: "all"
+  activePackFilter: "all",
+  iaDraft: null
 };
 
 
-const IA_BASE_CHOICES = [
-  { key: "ux_menu", title: "Refonte UX des menus", tags: ["menu", "ux", "navigation"], prompt: "Créer une navigation claire avec sections repliables et accès rapide." },
-  { key: "clean_arch", title: "Nettoyage architecture", tags: ["refactor", "code", "architecture"], prompt: "Découper le code en modules maintenables et lisibles." },
-  { key: "perf_front", title: "Optimisation front", tags: ["performance", "frontend", "ui"], prompt: "Réduire les re-renders et améliorer la fluidité sur mobile." },
-  { key: "sora_story", title: "Storyboard vidéo Sora", tags: ["sora", "video", "storyboard"], prompt: "Créer une séquence vidéo cohérente plan par plan." },
-  { key: "codex_patch", title: "Patch Codex sécurisé", tags: ["codex", "patch", "safe"], prompt: "Produire un patch incrémental sans casser l'existant." },
-  { key: "tone_brand", title: "Ton de marque", tags: ["style", "brand", "marketing"], prompt: "Adapter la voix du prompt à une identité de marque." },
-  { key: "test_plan", title: "Plan de tests", tags: ["test", "qa", "validation"], prompt: "Générer une checklist de tests fonctionnels et régression." },
-  { key: "docs", title: "Documentation claire", tags: ["documentation", "guide", "explication"], prompt: "Créer une documentation concise et actionnable." },
-  { key: "automation", title: "Automatisation", tags: ["automation", "script", "workflow"], prompt: "Automatiser les actions répétitives du flux prompt." },
-  { key: "creative_boost", title: "Boost créatif", tags: ["creative", "idea", "brainstorm"], prompt: "Proposer des variantes créatives de prompt sans hors-sujet." }
-];
+const iaEngine = (typeof PromptEngine !== "undefined" && PromptEngine) ? PromptEngine : null;
 
-function buildIaChoiceBank() {
-  const bank = [];
-  for (let i = 0; i < 100; i += 1) {
-    IA_BASE_CHOICES.forEach((choice) => {
-      bank.push({
-        id: `${choice.key}_${i + 1}`,
-        title: `${choice.title} #${i + 1}`,
-        tags: choice.tags,
-        prompt: choice.prompt
-      });
-    });
-  }
-  return bank.slice(0, 1000);
+function loadIaDraft() {
+  return safeJSONParse(localStorage.getItem(LS_KEYS.draft), null);
 }
 
-function scoreIaChoice(choice, brief, mode) {
-  const text = `${brief} ${mode}`.toLowerCase();
-  let score = 0;
-  choice.tags.forEach((tag) => {
-    if (text.includes(tag)) score += 5;
-  });
-  if (mode === "codex" && choice.tags.includes("codex")) score += 4;
-  if (mode === "sora" && choice.tags.includes("sora")) score += 4;
-  if (text.includes("menu") && choice.tags.includes("ux")) score += 3;
-  if (text.includes("prompt")) score += 2;
-  return score;
+function saveIaDraft(draft) {
+  if (!draft) return;
+  localStorage.setItem(LS_KEYS.draft, JSON.stringify(draft));
 }
 
-function pickBestIaChoices() {
-  const brief = $("#iaBrief")?.value || "";
-  const mode = $("#iaMode")?.value || "codex";
-  const bank = buildIaChoiceBank();
-  return bank
-    .map((choice) => ({ ...choice, score: scoreIaChoice(choice, brief, mode) }))
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 4);
+function activeIaDraft() {
+  return state.iaDraft || loadIaDraft();
 }
 
 function renderIaRecommendations() {
   const wrap = $("#iaRecommendations");
-  if (!wrap) return;
-  const recos = pickBestIaChoices();
+  if (!wrap || !iaEngine) return;
+  const brief = $("#iaBrief")?.value || "";
+  const draft = iaEngine.createDraft(brief);
+  if ($("#iaMode")?.value) draft.toolTarget = $("#iaMode").value;
+  draft.missingQuestions = iaEngine.missingInfoEngine(draft);
+  draft.suggestedQuestions = iaEngine.adaptiveQuestionFlow(draft);
+  draft.suggestions = iaEngine.upgradeSuggestions(draft);
+  draft.reasoningSummary = iaEngine.buildReasoningSummary(draft);
+  state.iaDraft = draft;
+  saveIaDraft(draft);
+
   wrap.innerHTML = "";
-  recos.forEach((rec, idx) => {
+  const summary = document.createElement("div");
+  summary.className = "item";
+  summary.innerHTML = `<div class="item-title">Analyse intelligente</div><div class="item-meta">${escapeHtml(draft.reasoningSummary).replaceAll("\n", "<br>")}</div>`;
+  wrap.appendChild(summary);
+
+  draft.suggestedQuestions.forEach((rec, idx) => {
     const item = document.createElement("label");
     item.className = "item recommendation-item";
-    item.innerHTML = `<span class="recommendation-rank">TOP ${idx + 1}</span><input type="radio" name="iaReco" value="${rec.id}" ${idx === 0 ? "checked" : ""} /><div><div class="item-title">${escapeHtml(rec.title)}</div><div class="item-meta">${escapeHtml(rec.prompt)} · score ${rec.score}</div></div>`;
+    item.innerHTML = `<span class="recommendation-rank">Q${idx + 1}</span><input type="radio" name="iaReco" value="${escapeHtml(rec.key)}" ${idx === 0 ? "checked" : ""} /><div><div class="item-title">${escapeHtml(rec.question)}</div><div class="item-meta">Priorité: ${escapeHtml(rec.priority)}</div></div>`;
     wrap.appendChild(item);
   });
+
+  if (draft.suggestions.length) {
+    const sug = document.createElement("div");
+    sug.className = "item";
+    sug.innerHTML = `<div class="item-title">Améliorations proposées</div><div class="item-meta">${escapeHtml(draft.suggestions.join(" • "))}</div>`;
+    wrap.appendChild(sug);
+  }
 }
 
 function generateIaPrompt() {
-  const recos = pickBestIaChoices();
-  const selectedId = document.querySelector('input[name="iaReco"]:checked')?.value;
-  const selected = recos.find((r) => r.id === selectedId) || recos[0];
+  if (!iaEngine) return;
+  const draft = activeIaDraft() || iaEngine.createDraft($("#iaBrief")?.value || "");
+  const selectedKey = document.querySelector('input[name="iaReco"]:checked')?.value;
+  const selectedQuestion = draft.suggestedQuestions.find((q) => q.key === selectedKey);
+  if (selectedQuestion) iaEngine.answerQuestion(draft, selectedQuestion.key, "à préciser / répondre plus tard");
+
+  draft.toolTarget = $("#iaMode")?.value || draft.toolTarget;
+  draft.extractedInfo.tone = $("#iaTone")?.value || draft.extractedInfo.tone;
+  draft.extractedInfo.outputLength = $("#iaDepth")?.value || draft.extractedInfo.outputLength;
+  draft.extractedInfo.deliveryFormat = $("#iaOutput")?.value || draft.extractedInfo.deliveryFormat;
+
+  iaEngine.composeAllVariants(draft);
+  const exported = iaEngine.exportModule(draft);
   const modeA = $("#iaMode")?.value || "codex";
   const modeB = $("#iaMode2")?.value || "sora";
-  const tone = $("#iaTone")?.value || "professionnel";
-  const audience = $("#iaAudience")?.value || "général";
-  const output = $("#iaOutput")?.value || "prompt final direct";
-  const depth = $("#iaDepth")?.value || "équilibré";
-  const brief = $("#iaBrief")?.value || "";
-  const prompt = normalizeSpaces(`Bonjour, je suis Félix votre prompteur.
+  const final = normalizeSpaces(`PROMPT ASSISTANT (${modeA.toUpperCase()} + ${modeB.toUpperCase()})
 
-Mission: générer un prompt ${modeA} avec support ${modeB}.
-Description utilisateur: ${brief}
-Angle recommandé: ${selected?.title || "général"} (${selected?.prompt || ""})
+Version Pro
+${draft.promptVariants.full}
 
-Contraintes:
-- Ton: ${tone}
-- Audience: ${audience}
-- Niveau: ${depth}
-- Sortie: ${output}
+Version courte
+${draft.promptVariants.short}
 
-Instructions:
-1) Reformuler l'objectif en 1 phrase.
-2) Décomposer en étapes actionnables.
-3) Ajouter contraintes qualité + checklist.
-4) Livrer un prompt final prêt à copier.`);
-  $("#iaFinalPrompt").value = prompt;
+Version XL
+${draft.promptVariants.xl}
+
+Version technique
+${draft.promptVariants.technical}
+
+Score qualité: ${draft.score.global}/100 (clarté ${draft.score.clarity}, complétude ${draft.score.completeness}, exécution ${draft.score.executionReadiness}, ambiguïté ${draft.score.ambiguityRisk})
+
+Checklist
+${exported.checklist}
+
+FAQ
+${exported.faq}`);
+
+  draft.finalPrompt = final;
+  draft.history = draft.history || [];
+  draft.history.unshift({ at: nowISO(), toolTarget: draft.toolTarget, score: draft.score.global, prompt: draft.promptVariants.full });
+  draft.history = draft.history.slice(0, 30);
+  draft.updatedAt = nowISO();
+  saveIaDraft(draft);
+  state.iaDraft = draft;
+  $("#iaFinalPrompt").value = final;
 }
 
 function uid(prefix = "id") {
@@ -1205,8 +1208,17 @@ function wireEvents() {
 
   $("#btnIaAnalyze")?.addEventListener("click", () => {
     renderIaRecommendations();
-    toast("IA: 4 meilleures options proposées ✅");
+    toast("IA: analyse complète prête ✅");
   });
+  $("#iaBrief")?.addEventListener("input", debounce(() => {
+    const current = activeIaDraft() || (iaEngine ? iaEngine.createDraft($("#iaBrief").value || "") : null);
+    if (current) {
+      current.userRawDescription = $("#iaBrief").value || "";
+      current.updatedAt = nowISO();
+      saveIaDraft(current);
+      state.iaDraft = current;
+    }
+  }, 250));
   $("#btnIaGenerate")?.addEventListener("click", () => {
     generateIaPrompt();
     toast("Prompt IA généré ✅");
@@ -1244,9 +1256,14 @@ function wireEvents() {
 function init() {
   migrateStorage();
   loadState();
+  state.iaDraft = loadIaDraft();
   $("#toolKind").value = state.settings.defaultType || "codex";
   wireEvents();
   renderAll();
+  if (state.iaDraft?.userRawDescription && $("#iaBrief")) {
+    $("#iaBrief").value = state.iaDraft.userRawDescription;
+    if ($("#iaFinalPrompt") && state.iaDraft.finalPrompt) $("#iaFinalPrompt").value = state.iaDraft.finalPrompt;
+  }
   buildPrompt();
 }
 
