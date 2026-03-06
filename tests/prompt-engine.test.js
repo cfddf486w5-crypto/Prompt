@@ -58,6 +58,22 @@ function run() {
   const contradictionList = engine.detectContradictions(contradictionDraft);
   assert.ok(Array.isArray(contradictionList));
 
+
+  const convo = engine.createConversationState('Je veux créer une app iPhone offline avec UI pro');
+  assert.ok(convo.structuredPrompt.platform.includes('iPhone'));
+  assert.ok(Array.isArray(convo.structuredPrompt.missingFields));
+
+  const progressed = engine.continueConversation(convo, 'Pour Codex, je veux garder le UI existant et une version ultra détaillée');
+  assert.ok(progressed.messages.length >= 2);
+  assert.ok(progressed.structuredPrompt.mustKeep.includes('UI existant'));
+
+  const finalizedConvo = engine.generateFinalPromptSet(progressed);
+  assert.ok(finalizedConvo.finalVariants.short.length > 10);
+  assert.ok(finalizedConvo.finalVariants.ultra.includes('NIVEAU DE DÉTAIL'));
+
+  const revised = engine.reviseConversationPrompt(finalizedConvo, 'plus court mais garde le mode offline');
+  assert.ok(revised.structuredPrompt.constraints.includes('Offline requis'));
+
   const boosted = engine.strengthenPrompt('Base', 'Rendre plus technique', engine.TOOL_TARGETS.CODEX);
   assert.ok(boosted.includes('RENFORCEMENT'));
 

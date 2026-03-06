@@ -169,28 +169,62 @@
 
       <section id="view-ia" class="view">
         <section class="card">
-          <div class="card-title">Création IA</div>
-          <p class="hint">Bonjour 👋 je suis <strong>Félix votre prompteur</strong>. Donne-moi une brève description, je vais décortiquer votre besoin et proposer 3-4 choix parmi une base de 1000 options.</p>
+          <div class="card-title">Création IA conversationnelle</div>
+          <p class="hint">Félix orchestre la création de ton prompt : discussion libre, collecte guidée, construction progressive, finalisation puis révision sans repartir de zéro.</p>
           <div class="grid2">
-            <div class="field"><label for="iaMode">Encadré IA #1</label><select id="iaMode" class="select"><option value="codex">Codex</option><option value="sora">Sora</option></select></div>
-            <div class="field"><label for="iaMode2">Encadré IA #2</label><select id="iaMode2" class="select"><option value="sora">Sora</option><option value="codex">Codex</option></select></div>
+            <div class="field"><label for="iaMode">Outil cible principal</label><select id="iaMode" class="select"><option value="codex">Codex</option><option value="sora">Sora</option><option value="gpt">GPT</option></select></div>
+            <div class="field"><label for="iaDepth">Niveau de détail</label><select id="iaDepth" class="select"><option>concis</option><option selected>équilibré</option><option>détaillé</option><option>ultra</option></select></div>
           </div>
-          <div class="field"><label for="iaBrief">Brève description</label><textarea id="iaBrief" class="textarea" rows="3" placeholder="Ex: Je veux un prompt codex pour refactoriser une app de menu avec accordéons et page IA."></textarea></div>
-          <button id="btnIaAnalyze" class="btn btn-secondary">Démarrer la séquence IA</button>
-          <div id="iaRecommendations" class="list" style="margin-top:10px;"></div>
-
-          <div class="grid2" style="margin-top:10px;">
-            <div class="field"><label for="iaTone">Ton</label><select id="iaTone" class="select"><option>professionnel</option><option>créatif</option><option>direct</option><option>pédagogique</option></select></div>
-            <div class="field"><label for="iaAudience">Audience</label><select id="iaAudience" class="select"><option>développeur</option><option>client final</option><option>équipe produit</option><option>général</option></select></div>
-            <div class="field"><label for="iaOutput">Sortie attendue</label><select id="iaOutput" class="select"><option>plan étape par étape</option><option>prompt final direct</option><option>checklist + prompt</option><option>JSON structuré</option></select></div>
-            <div class="field"><label for="iaDepth">Niveau de détail</label><select id="iaDepth" class="select"><option>concis</option><option>équilibré</option><option>détaillé</option><option>expert</option></select></div>
-          </div>
+          <div class="field"><label for="iaBrief">Message utilisateur</label><textarea id="iaBrief" class="textarea" rows="3" placeholder="Ex: Je veux un prompt pour créer une app iPhone + PC Windows, offline, avec UI pro."></textarea></div>
 
           <div class="row gap wrap">
-            <button id="btnIaGenerate" class="btn btn-primary">Générer le prompt prêt à copier</button>
-            <button id="btnIaCopy" class="btn btn-ghost">Copier le prompt IA</button>
+            <button id="btnIaAnalyze" class="btn btn-secondary">Envoyer message</button>
+            <button id="btnIaNext" class="btn btn-ghost">Répondre à la question suivante</button>
+            <button id="btnIaContinue" class="btn btn-ghost">Continuer la discussion</button>
+            <button id="btnIaGenerate" class="btn btn-primary">Générer prompt final</button>
+            <button id="btnIaImprove" class="btn btn-ghost">Améliorer le prompt</button>
+            <button id="btnIaRegenerate" class="btn btn-ghost">Régénérer</button>
+            <button id="btnIaCopy" class="btn btn-ghost">Copier prompt</button>
+            <button id="btnIaExport" class="btn btn-ghost">Exporter le prompt</button>
+            <button id="btnIaReset" class="btn btn-ghost danger">Réinitialiser la conversation</button>
           </div>
-          <div class="field" style="margin-top:10px;"><label for="iaFinalPrompt">Prompt final IA</label><textarea id="iaFinalPrompt" class="textarea mono" rows="10" spellcheck="false"></textarea></div>
+
+          <div class="ia-maturity" id="iaMaturityWrap">
+            <div class="item-title">Maturité du prompt</div>
+            <div class="ia-maturity-bar"><div id="iaMaturityBar" class="ia-maturity-fill" style="width:0%"></div></div>
+            <div id="iaMaturityLabel" class="item-meta">idée initiale</div>
+          </div>
+
+          <div class="grid2" style="margin-top:10px;">
+            <section class="panel">
+              <div class="panel-title">Conversation</div>
+              <div id="iaConversation" class="ia-conversation"></div>
+            </section>
+            <section class="panel">
+              <div class="panel-title">Questions guidées / suggestions</div>
+              <div id="iaRecommendations" class="list"></div>
+            </section>
+          </div>
+
+          <div class="grid2" style="margin-top:10px;">
+            <section class="panel">
+              <div class="panel-title">Informations collectées</div>
+              <pre id="iaCollected" class="ia-json mono"></pre>
+              <button id="btnIaShowInfo" class="btn btn-ghost">Voir les infos déjà comprises</button>
+            </section>
+            <section class="panel">
+              <div class="panel-title">Ce qu'il manque encore</div>
+              <div id="iaMissing" class="hint"></div>
+              <button id="btnIaShowMissing" class="btn btn-ghost">Voir les infos manquantes</button>
+            </section>
+          </div>
+
+          <div class="row gap wrap" style="margin-top:10px;">
+            <button id="btnIaVariantShort" class="btn btn-ghost">Version courte</button>
+            <button id="btnIaVariantLong" class="btn btn-ghost">Version longue</button>
+            <button id="btnIaVariantUltra" class="btn btn-ghost">Version ultra détaillée</button>
+          </div>
+          <div class="field" style="margin-top:10px;"><label for="iaFinalPrompt">Prompt final</label><textarea id="iaFinalPrompt" class="textarea mono" rows="14" spellcheck="false"></textarea></div>
         </section>
       </section>
 

@@ -160,7 +160,218 @@
     }
   };
 
+  const PROMPT_FIELDS = [
+    "toolTarget", "projectType", "platform", "audience", "visualStyle", "technicalStack", "coreFeatures", "constraints",
+    "inputs", "outputs", "tone", "levelOfDetail", "deliveryFormat", "mustKeep", "mustAvoid", "references"
+  ];
+
+  const PROJECT_QUESTION_TEMPLATES = {
+    app: ["Quel type d'app veux-tu créer (web, mobile, desktop) ?", "Quelles fonctionnalités sont obligatoires ?", "Faut-il garder le UI existant ?"],
+    "site web": ["Quelles sections la page doit contenir ?", "Mobile-first obligatoire ?", "Quel framework ou stack veux-tu ?"],
+    "interface mobile": ["Cible iPhone, Android ou les deux ?", "Navigation principale (tabs, stack, drawer) ?", "Le mode offline est-il requis ?"],
+    vidéo: ["Quel style visuel souhaites-tu ?", "Quelle ambiance émotionnelle ?", "Durée et format final (16:9, 9:16) ?"],
+    image: ["Quel style d'image veux-tu ?", "Sujet principal et décor ?", "Réaliste ou stylisé ?"],
+    automation: ["Quel workflow veux-tu automatiser ?", "Quelles sont les entrées/sorties ?", "Quelles contraintes techniques ou outils ?"],
+    jeu: ["Quel genre de jeu ?", "Mécaniques principales ?", "Plateforme cible ?"],
+    storyboard: ["Combien de scènes/plans ?", "Arc émotionnel principal ?", "Rythme de coupe souhaité ?"],
+    "agent ia": ["Quel rôle exact pour l'agent ?", "Quelles actions autonomes autorisées ?", "Quelles limites de sécurité ?"],
+    défaut: ["Quel est ton objectif principal ?", "Pour quel outil veux-tu le prompt final ?", "Quel niveau de détail veux-tu ?"]
+  };
+
   function normalize(text) { return String(text || "").toLowerCase().trim(); }
+
+  function detectProjectType(text) {
+    const t = normalize(text);
+    const map = [
+      [/\b(video|vidéo|film|cinem|cinéma|sora|scene|scène)\b/, "vidéo"],
+      [/\b(image|illustration|photo|visuel)\b/, "image"],
+      [/\b(app|application|mobile|ios|android|iphone)\b/, "app"],
+      [/\b(site|landing|page web|website)\b/, "site web"],
+      [/\b(automation|automatis|workflow|logistique)\b/, "automation"],
+      [/\b(jeu|game|gaming)\b/, "jeu"],
+      [/\b(storyboard|sequence|séquence|plan)\b/, "storyboard"],
+      [/\b(agent|assistant ia|agent ia)\b/, "agent ia"]
+    ];
+    const found = map.find(([rx]) => rx.test(t));
+    return found ? found[1] : "défaut";
+  }
+
+  function splitList(text) {
+    return String(text || "").split(/[;,\n]|\bet\b/i).map((x) => x.trim()).filter(Boolean);
+  }
+
+  function ensurePromptState(seed) {
+    return Object.assign({
+      toolTarget: "",
+      projectType: "",
+      platform: [],
+      audience: "",
+      visualStyle: "",
+      technicalStack: "",
+      coreFeatures: [],
+      constraints: [],
+      inputs: "",
+      outputs: "",
+      tone: "",
+      levelOfDetail: "",
+      deliveryFormat: "",
+      mustKeep: [],
+      mustAvoid: [],
+      references: [],
+      missingFields: [],
+      finalPrompt: ""
+    }, seed || {});
+  }
+
+  function extractStructuredFields(text, current) {
+    const t = normalize(text);
+    const next = ensurePromptState(current);
+    if (!next.toolTarget) next.toolTarget = inferTool(t) === TOOL_TARGETS.UNKNOWN ? "" : inferTool(t);
+    if (!next.projectType) next.projectType = detectProjectType(t) === "défaut" ? "" : detectProjectType(t);
+    if (/iphone|ios/.test(t) && !next.platform.includes("iPhone")) next.platform.push("iPhone");
+    if (/android/.test(t) && !next.platform.includes("Android")) next.platform.push("Android");
+    if (/pc|windows|desktop/.test(t) && !next.platform.includes("PC Windows")) next.platform.push("PC Windows");
+    if (/web|site|browser|github pages/.test(t) && !next.platform.includes("Web")) next.platform.push("Web");
+    if (/offline|hors ligne/.test(t) && !next.constraints.includes("Offline requis")) next.constraints.push("Offline requis");
+    if (/garder.*ui|keep.*ui|ne pas toucher.*ui|conserver.*ui/.test(t) && !next.mustKeep.includes("UI existant")) next.mustKeep.push("UI existant");
+    if (/mobile-first/.test(t) && !next.constraints.includes("Mobile-first")) next.constraints.push("Mobile-first");
+    if (/codex/.test(t)) next.toolTarget = TOOL_TARGETS.CODEX;
+    if (/sora/.test(t)) next.toolTarget = TOOL_TARGETS.SORA;
+    if (/gpt/.test(t) && !next.toolTarget) next.toolTarget = "gpt";
+    const detailMatch = t.match(/\b(concis|court|équilibré|détaillé|expert|ultra)\b/);
+    if (detailMatch) next.levelOfDetail = detailMatch[1];
+    const toneMatch = t.match(/\b(pro|professionnel|créatif|direct|pédagogique|cinématique)\b/);
+    if (toneMatch) next.tone = toneMatch[1];
+    if (/html|css|javascript|react|vue|angular|flutter|swift|kotlin/.test(t)) next.technicalStack = splitList(text).find((x) => /html|css|javascript|react|vue|angular|flutter|swift|kotlin/i.test(x)) || next.technicalStack;
+    if (/fonction|features?|inclure|avec/.test(t)) next.coreFeatures = [...new Set([...next.coreFeatures, ...splitList(text).filter((x) => x.length > 3).slice(0, 6)])];
+    if (!next.outputs && /json|checklist|prompt|storyboard|plan/.test(t)) next.outputs = splitList(text).find((x) => /json|checklist|prompt|storyboard|plan/i.test(x)) || "";
+    if (!next.visualStyle && /pro|cinématique|minimaliste|moderne|réaliste|stylisé/.test(t)) next.visualStyle = splitList(text).find((x) => /pro|cinématique|minimaliste|moderne|réaliste|stylisé/i.test(x)) || "";
+    return next;
+  }
+
+  function computeMissingFields(promptState) {
+    const checks = [
+      ["projectType", !!promptState.projectType],
+      ["toolTarget", !!promptState.toolTarget],
+      ["platform", promptState.platform.length > 0],
+      ["coreFeatures", promptState.coreFeatures.length > 0],
+      ["constraints", promptState.constraints.length > 0 || promptState.mustKeep.length > 0],
+      ["deliveryFormat", !!promptState.deliveryFormat || !!promptState.outputs],
+      ["levelOfDetail", !!promptState.levelOfDetail],
+      ["visualStyle", !!promptState.visualStyle || promptState.projectType === "automation"]
+    ];
+    return checks.filter((x) => !x[1]).map((x) => x[0]);
+  }
+
+  function maturityFromMissing(missing) {
+    if (missing.length === 0) return { label: "prompt final prêt", score: 100 };
+    if (missing.length <= 2) return { label: "presque complet", score: 80 };
+    if (missing.length <= 4) return { label: "partiellement défini", score: 60 };
+    if (missing.length <= 6) return { label: "brouillon", score: 35 };
+    return { label: "idée initiale", score: 15 };
+  }
+
+  function buildFinalPromptFromState(promptState, variant) {
+    const detailLabel = variant === "short" ? "compact" : variant === "ultra" ? "ultra détaillé" : "détaillé";
+    return sanitizePrompt([
+      `RÔLE: Tu es un assistant expert en ${promptState.projectType || "création de prompt"}.`,
+      `MISSION: Produire le meilleur résultat pour ${promptState.toolTarget || "l'outil cible"}.`,
+      `CONTEXTE: Plateformes ${promptState.platform.join(", ") || "à confirmer"}; audience ${promptState.audience || "à confirmer"}.`,
+      `OBJECTIFS: ${promptState.coreFeatures.join("; ") || "à préciser"}.`,
+      `CONTRAINTES: ${[...promptState.constraints, ...promptState.mustKeep.map((x) => `garder ${x}`), ...promptState.mustAvoid.map((x) => `éviter ${x}`)].join("; ") || "aucune"}.`,
+      `STYLE & TON: ${promptState.visualStyle || "propre"}, ton ${promptState.tone || "professionnel"}.`,
+      `EXIGENCES TECHNIQUES: ${promptState.technicalStack || "stack libre"}.`,
+      `LIVRABLES: ${promptState.outputs || promptState.deliveryFormat || "prompt final + checklist"}.`,
+      `NIVEAU DE DÉTAIL: ${promptState.levelOfDetail || detailLabel}.`,
+      "CRITÈRES DE QUALITÉ: précis, non ambigu, orienté résultat, facile à copier.",
+      "NE PAS FAIRE: inventer des contraintes non validées; casser l'UI existant si verrouillé."
+    ].join("\n"));
+  }
+
+  function suggestSmartOptions(promptState) {
+    const suggestions = [
+      "Veux-tu une version plus technique ?",
+      "Veux-tu une version pour Codex ?",
+      "Veux-tu une version ultra détaillée ?"
+    ];
+    if (!promptState.mustKeep.includes("UI existant")) suggestions.push("Veux-tu que je garde le UI existant ?");
+    if (!promptState.constraints.includes("Mobile-first")) suggestions.push("Veux-tu une version mobile-first ?");
+    return suggestions;
+  }
+
+  function nextDynamicQuestion(promptState) {
+    const missing = computeMissingFields(promptState);
+    const template = PROJECT_QUESTION_TEMPLATES[promptState.projectType || "défaut"] || PROJECT_QUESTION_TEMPLATES.défaut;
+    const byField = {
+      toolTarget: "Pour quel outil final veux-tu ce prompt (Codex, Sora, GPT, autre) ?",
+      projectType: "Quel type de projet veux-tu adresser (app, vidéo, image, automation...) ?",
+      platform: "Quelle plateforme cible (web, iPhone, Android, desktop) ?",
+      coreFeatures: "Quelles sont les fonctions absolument obligatoires ?",
+      constraints: "Quelles contraintes techniques ou métier dois-je respecter ?",
+      deliveryFormat: "Quel format de sortie attends-tu (prompt, checklist, JSON, storyboard) ?",
+      levelOfDetail: "Tu veux une version courte, détaillée ou ultra détaillée ?",
+      visualStyle: "Quel style/ton veux-tu dans le résultat final ?"
+    };
+    const key = missing[0];
+    return { field: key || "discussion", question: key ? byField[key] : template[0] };
+  }
+
+  function createConversationState(initialText) {
+    const structuredPrompt = extractStructuredFields(initialText || "", ensurePromptState());
+    structuredPrompt.missingFields = computeMissingFields(structuredPrompt);
+    const maturity = maturityFromMissing(structuredPrompt.missingFields);
+    return {
+      mode: "discussion",
+      messages: initialText ? [{ role: "user", text: initialText, at: new Date().toISOString() }] : [],
+      structuredPrompt,
+      maturity,
+      suggestions: suggestSmartOptions(structuredPrompt),
+      nextQuestion: nextDynamicQuestion(structuredPrompt),
+      finalVariants: { short: "", detailed: "", ultra: "", checklist: "", summary: "" }
+    };
+  }
+
+  function continueConversation(conversation, userMessage) {
+    const convo = conversation || createConversationState("");
+    if (userMessage) convo.messages.push({ role: "user", text: userMessage, at: new Date().toISOString() });
+    convo.structuredPrompt = extractStructuredFields(userMessage || "", convo.structuredPrompt);
+    convo.structuredPrompt.missingFields = computeMissingFields(convo.structuredPrompt);
+    convo.maturity = maturityFromMissing(convo.structuredPrompt.missingFields);
+    convo.mode = convo.structuredPrompt.missingFields.length ? "collecte" : "finalisation";
+    convo.nextQuestion = nextDynamicQuestion(convo.structuredPrompt);
+    convo.suggestions = suggestSmartOptions(convo.structuredPrompt);
+    const assistantText = convo.structuredPrompt.missingFields.length
+      ? `Pour te faire un prompt solide, il me manque surtout ${Math.min(3, convo.structuredPrompt.missingFields.length)} élément(s). ${convo.nextQuestion.question}`
+      : "Super, on a assez d'informations. Je peux générer les versions compacte, détaillée et ultra pro.";
+    convo.messages.push({ role: "assistant", text: assistantText, at: new Date().toISOString() });
+    return convo;
+  }
+
+  function generateFinalPromptSet(conversation) {
+    const convo = conversation || createConversationState("");
+    convo.mode = "finalisation";
+    convo.finalVariants.short = buildFinalPromptFromState(convo.structuredPrompt, "short");
+    convo.finalVariants.detailed = buildFinalPromptFromState(convo.structuredPrompt, "detailed");
+    convo.finalVariants.ultra = buildFinalPromptFromState(convo.structuredPrompt, "ultra");
+    convo.finalVariants.checklist = computeMissingFields(convo.structuredPrompt).length
+      ? `À compléter: ${computeMissingFields(convo.structuredPrompt).join(", ")}`
+      : "✅ Objectif défini\n✅ Outil ciblé\n✅ Plateformes\n✅ Contraintes\n✅ Livrables\n✅ Niveau de détail";
+    convo.finalVariants.summary = `Type: ${convo.structuredPrompt.projectType || "-"} | Outil: ${convo.structuredPrompt.toolTarget || "-"} | Plateformes: ${convo.structuredPrompt.platform.join(", ") || "-"}`;
+    convo.structuredPrompt.finalPrompt = convo.finalVariants.detailed;
+    return convo;
+  }
+
+  function reviseConversationPrompt(conversation, instruction) {
+    const convo = conversation || createConversationState("");
+    const text = normalize(instruction);
+    if (/plus court/.test(text)) convo.structuredPrompt.levelOfDetail = "concis";
+    if (/plus detail|plus détaill|ultra/.test(text)) convo.structuredPrompt.levelOfDetail = "ultra";
+    if (/plus pro|technique/.test(text)) convo.structuredPrompt.tone = "professionnel";
+    if (/offline/.test(text) && !convo.structuredPrompt.constraints.includes("Offline requis")) convo.structuredPrompt.constraints.push("Offline requis");
+    if (/garde.*ui|ui actuel/.test(text) && !convo.structuredPrompt.mustKeep.includes("UI existant")) convo.structuredPrompt.mustKeep.push("UI existant");
+    if (/iphone/.test(text) && !convo.structuredPrompt.platform.includes("iPhone")) convo.structuredPrompt.platform.push("iPhone");
+    return generateFinalPromptSet(convo);
+  }
 
   function detectWeakWords(text) {
     const t = normalize(text);
@@ -745,6 +956,12 @@
     composeAllVariants,
     answerQuestion,
     exportModule,
-    strengthenPrompt
+    strengthenPrompt,
+    createConversationState,
+    continueConversation,
+    generateFinalPromptSet,
+    reviseConversationPrompt,
+    computeMissingFields,
+    maturityFromMissing
   };
 });
