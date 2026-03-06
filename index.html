@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Prompt Builder — Sora + Codex (V1)</title>
+  <title>Prompt Factory — Sora + Codex (V2)</title>
   <link rel="stylesheet" href="styles.css" />
   <meta name="theme-color" content="#0b1220" />
 </head>
@@ -12,7 +12,7 @@
     <div class="brand">
       <div class="logo" aria-hidden="true">✦</div>
       <div>
-        <div class="brand-title">Prompt Builder</div>
+        <div class="brand-title">Prompt Factory</div>
         <div class="brand-sub">Mix Sora + Codex · Offline</div>
       </div>
     </div>
@@ -55,10 +55,14 @@
           <button class="chip" data-insert="{CONTRAINTES}">{CONTRAINTES}</button>
         </div>
       </section>
+
+      <section class="panel">
+        <div class="panel-title">Insérer bloc</div>
+        <div id="blockChips" class="row gap wrap"></div>
+      </section>
     </aside>
 
     <section class="content">
-      <!-- BUILDER -->
       <section id="view-builder" class="view active">
         <div class="grid2">
           <section class="card">
@@ -102,7 +106,60 @@
               <input id="outputFormat" class="input" placeholder="Ex: livrer un ZIP, fichiers listés, instructions, etc." />
             </div>
 
-            <div class="row gap">
+            <section id="codexProSection" class="panel" style="margin-top:10px;">
+              <div class="panel-title">Codex Pro</div>
+              <div class="field">
+                <label>Style de sortie</label>
+                <div class="row gap wrap">
+                  <label><input type="radio" name="codexOutputStyle" value="patch_minimal" checked /> Patch minimal</label>
+                  <label><input type="radio" name="codexOutputStyle" value="plan_patch" /> Plan + patch</label>
+                  <label><input type="radio" name="codexOutputStyle" value="full_code" /> Full code</label>
+                </div>
+              </div>
+              <div class="field">
+                <label>Contraintes de projet</label>
+                <div class="row gap wrap">
+                  <label><input class="codexConstraint" type="checkbox" value="Ne pas toucher UI" checked /> UI strict</label>
+                  <label><input class="codexConstraint" type="checkbox" value="Pas de dépendances externes" checked /> Sans dépendances</label>
+                  <label><input class="codexConstraint" type="checkbox" value="Offline-first" checked /> Offline-first</label>
+                  <label><input class="codexConstraint" type="checkbox" value="Compat iPhone" checked /> iPhone</label>
+                  <label><input class="codexConstraint" type="checkbox" value="Backward compatible localStorage" checked /> Backward compat</label>
+                </div>
+              </div>
+              <div class="field"><label for="codexRisks">Bloc risques</label><textarea id="codexRisks" class="textarea" rows="2"></textarea></div>
+              <div class="field"><label for="codexFiles">Bloc fichiers (modifier/éviter)</label><textarea id="codexFiles" class="textarea" rows="2"></textarea></div>
+              <div class="field"><label for="codexDod">Definition of done</label><textarea id="codexDod" class="textarea" rows="2"></textarea></div>
+              <button id="btnGenerateCodexPro" class="btn btn-secondary">Générer prompt Codex Pro</button>
+            </section>
+
+            <section id="soraStudioSection" class="panel" style="margin-top:10px; display:none;">
+              <div class="panel-title">Sora Studio</div>
+              <div class="grid2">
+                <div class="field"><label for="soraDuration">Durée</label><select id="soraDuration" class="select"><option>10s</option><option>15s</option><option>30s</option><option value="custom">custom</option></select></div>
+                <div class="field"><label for="soraDurationCustom">Durée custom</label><input id="soraDurationCustom" class="input" placeholder="Ex: 22s" /></div>
+                <div class="field"><label for="soraRatio">Ratio</label><select id="soraRatio" class="select"><option>16:9</option><option>9:16</option><option>1:1</option></select></div>
+                <div class="field"><label for="soraFps">FPS</label><select id="soraFps" class="select"><option>24</option><option>30</option><option>60</option></select></div>
+                <div class="field"><label for="soraLens">Lens</label><select id="soraLens" class="select"><option>14mm</option><option>24mm</option><option>35mm</option><option>50mm</option><option>85mm</option></select></div>
+                <div class="field"><label for="soraCameraMove">Mouvement caméra</label><select id="soraCameraMove" class="select"><option>drone</option><option>steadycam</option><option>dolly</option><option>crane</option><option>handheld soft</option><option>timelapse</option></select></div>
+                <div class="field"><label for="soraLighting">Lighting</label><select id="soraLighting" class="select"><option>golden hour</option><option>blue hour</option><option>overcast</option><option>night</option><option>neon city</option><option>storm backlight</option></select></div>
+                <div class="field"><label for="soraWeather">Weather</label><select id="soraWeather" class="select"><option>clear</option><option>fog</option><option>rain</option><option>snow</option><option>wind</option></select></div>
+                <div class="field"><label for="soraMood">Mood</label><select id="soraMood" class="select"><option>calm</option><option>awe</option><option>romantic</option><option>epic</option><option>mysterious</option></select></div>
+                <div class="field"><label for="soraContinuity">Continuity level</label><select id="soraContinuity" class="select"><option>low</option><option>medium</option><option selected>high</option></select></div>
+                <div class="field"><label for="soraDetail">Detail level</label><select id="soraDetail" class="select"><option>low</option><option>med</option><option selected>high</option></select></div>
+              </div>
+              <div class="field"><label for="soraNegativeList">Negative list</label><textarea id="soraNegativeList" class="textarea" rows="2"></textarea></div>
+              <div class="field">
+                <div class="row gap wrap">
+                  <button id="btnSoraAddShot" class="btn btn-ghost" type="button">+ Ajouter plan</button>
+                  <button id="btnSoraRandomPro" class="btn btn-ghost" type="button">Random pro</button>
+                  <button id="btnSoraAuto" class="btn btn-secondary" type="button">Générer Sora Studio (auto)</button>
+                </div>
+              </div>
+              <div id="soraPresets" class="row gap wrap"></div>
+              <div id="soraShotList" class="list"></div>
+            </section>
+
+            <div class="row gap" style="margin-top:10px;">
               <button id="btnReset" class="btn btn-ghost">Réinitialiser</button>
               <button id="btnGenerate" class="btn btn-primary">Générer prompt</button>
             </div>
@@ -118,8 +175,11 @@
               <button id="btnCopy" class="btn btn-secondary">Copier</button>
               <button id="btnFavorite" class="btn btn-ghost" title="Ajouter aux favoris">⭐ Favori</button>
               <button id="btnTidy" class="btn btn-ghost" title="Nettoyer la mise en forme">Nettoyer</button>
+              <button id="btnAnalyzePrompt" class="btn btn-ghost">Analyser prompt</button>
+              <button id="btnApplyImprovements" class="btn btn-ghost">Appliquer améliorations</button>
             </div>
             <textarea id="finalPrompt" class="textarea mono" rows="22" spellcheck="false"></textarea>
+            <div id="analysisResult" class="hint"></div>
             <div class="small muted">
               Tu peux éditer directement le prompt final (zone ci-dessus). La sauvegarde le gardera telle quelle.
             </div>
@@ -127,7 +187,6 @@
         </div>
       </section>
 
-      <!-- TEMPLATES -->
       <section id="view-templates" class="view">
         <div class="grid2">
           <section class="card">
@@ -170,7 +229,6 @@
         </div>
       </section>
 
-      <!-- HISTORY -->
       <section id="view-history" class="view">
         <section class="card">
           <div class="card-title">Historique</div>
@@ -183,7 +241,6 @@
         </section>
       </section>
 
-      <!-- SETTINGS -->
       <section id="view-settings" class="view">
         <section class="card">
           <div class="card-title">Paramètres</div>
@@ -198,31 +255,26 @@
           <div class="field">
             <label>Remplacement de variables rapides</label>
             <div class="grid2">
-              <div class="field">
-                <label for="varLieu">{LIEU}</label>
-                <input id="varLieu" class="input" placeholder="Ex: forêt boréale, bord de mer..." />
-              </div>
-              <div class="field">
-                <label for="varSujet">{SUJET}</label>
-                <input id="varSujet" class="input" placeholder="Ex: scène overland, UI app..." />
-              </div>
-              <div class="field">
-                <label for="varStyle">{STYLE}</label>
-                <input id="varStyle" class="input" placeholder="Ex: ultra réaliste, cinématique..." />
-              </div>
-              <div class="field">
-                <label for="varDuree">{DUREE}</label>
-                <input id="varDuree" class="input" placeholder="Ex: 10s, 30s..." />
-              </div>
-              <div class="field">
-                <label for="varFormat">{FORMAT}</label>
-                <input id="varFormat" class="input" placeholder="Ex: livrer en ZIP, code complet..." />
-              </div>
-              <div class="field">
-                <label for="varContraintes">{CONTRAINTES}</label>
-                <input id="varContraintes" class="input" placeholder="Ex: ne pas toucher UI, pas de logo..." />
-              </div>
+              <div class="field"><label for="varLieu">{LIEU}</label><input id="varLieu" class="input" placeholder="Ex: forêt boréale, bord de mer..." /></div>
+              <div class="field"><label for="varSujet">{SUJET}</label><input id="varSujet" class="input" placeholder="Ex: scène overland, UI app..." /></div>
+              <div class="field"><label for="varStyle">{STYLE}</label><input id="varStyle" class="input" placeholder="Ex: ultra réaliste, cinématique..." /></div>
+              <div class="field"><label for="varDuree">{DUREE}</label><input id="varDuree" class="input" placeholder="Ex: 10s, 30s..." /></div>
+              <div class="field"><label for="varFormat">{FORMAT}</label><input id="varFormat" class="input" placeholder="Ex: livrer en ZIP, code complet..." /></div>
+              <div class="field"><label for="varContraintes">{CONTRAINTES}</label><input id="varContraintes" class="input" placeholder="Ex: ne pas toucher UI, pas de logo..." /></div>
             </div>
+          </div>
+
+          <div class="field">
+            <label>Packs & templates</label>
+            <div class="row gap wrap">
+              <button id="btnExportTemplates" class="btn btn-ghost">Export Templates (.json)</button>
+              <button id="btnImportTemplatesMerge" class="btn btn-ghost">Import Templates (fusion)</button>
+              <button id="btnImportTemplatesReplace" class="btn btn-ghost">Import Templates (remplacer)</button>
+              <button id="btnExportPacks" class="btn btn-ghost">Export Packs (.json)</button>
+              <button id="btnImportPacks" class="btn btn-ghost">Import Packs (.json)</button>
+            </div>
+            <input id="fileTemplates" type="file" accept="application/json" style="display:none" />
+            <input id="filePacks" type="file" accept="application/json" style="display:none" />
           </div>
 
           <div class="row gap">
@@ -230,9 +282,7 @@
             <button id="btnFactoryReset" class="btn btn-ghost danger">Reset complet</button>
           </div>
 
-          <div class="hint">
-            Tout reste sur ton appareil (localStorage). Aucune donnée envoyée.
-          </div>
+          <div class="hint">Tout reste sur ton appareil (localStorage). Aucune donnée envoyée.</div>
         </section>
       </section>
     </section>
