@@ -27,6 +27,349 @@ const PROMPT_BLOCKS_DEFAULT = [
   { id: "b_files_only", label: "Format sortie: fichiers modifiés only", text: "FORMAT DE SORTIE\nRetourne uniquement le code complet des fichiers modifiés.\nPas de pseudo-code.\n" }
 ];
 
+const PB_BLOCKS_SEED_VERSION = "blocks_pack_2026-03-05_v1";
+
+const PB_BLOCKS = [
+  {
+    id: "sora.neg.001",
+    title: "Sora — Negative (général ultra strict)",
+    tags: ["sora", "negative", "quality"],
+    body:
+`NEGATIVE / À ÉVITER ABSOLUMENT
+- texte à l’écran, sous-titres, watermark, logo, UI overlay
+- glitch, jitter, morphing, warping, compression artefacts
+- mains/visages déformés, membres supplémentaires, anatomie incohérente
+- flicker, incohérence lumière d’un plan à l’autre
+- changements soudains de décor/tenue/objets sans raison
+- profondeur de champ irréaliste, bokeh “sale”
+- sur-netteté artificielle, halos HDR excessifs`
+  },
+  {
+    id: "sora.neg.002",
+    title: "Sora — Continuité stricte (règles)",
+    tags: ["sora", "continuity", "quality"],
+    body:
+`CONTINUITÉ STRICTE
+- mêmes éléments clés d’un plan à l’autre (couleurs, météo, heure)
+- éviter les “sauts” de position/cadrage impossibles
+- transitions fluides (cut logique) ou “match cut” cohérent
+- pas de téléportation d’objets, pas d’apparitions/disparitions`
+  },
+  {
+    id: "sora.neg.003",
+    title: "Sora — Anti-flicker / Anti-jitter",
+    tags: ["sora", "stability", "quality"],
+    body:
+`STABILITÉ IMAGE
+- pas de flicker d’exposition
+- pas de micro-jitter / tremblements numériques
+- motion blur naturel, cohérent avec la vitesse caméra
+- réduire les détails “instables” (motifs fins) si ça scintille`
+  },
+  {
+    id: "sora.neg.004",
+    title: "Sora — Rendu réaliste (anti “CGI look”)",
+    tags: ["sora", "realism", "quality"],
+    body:
+`ANTI CGI
+- textures naturelles (bois, roche, eau) non plastifiées
+- lumière physiquement plausible, ombres crédibles
+- éviter saturation excessive, éviter “skin smoothing”`
+  },
+  ...Array.from({ length: 8 }).map((_, i) => ({
+    id: `sora.neg.${String(5 + i).padStart(3, "0")}`,
+    title: `Sora — Negative ciblé #${5 + i} (rapide)`,
+    tags: ["sora", "negative", "quick"],
+    body:
+`NEGATIVE RAPIDE
+- pas de texte/watermark
+- pas de glitch/morph
+- pas de membres/visages incohérents
+- pas de jump cuts illogiques`
+  })),
+  {
+    id: "sora.neg.013",
+    title: "Sora — Eau réaliste (océan/lac)",
+    tags: ["sora", "water", "realism"],
+    body:
+`EAU RÉALISTE
+- reflets cohérents (angle soleil, ciel)
+- vagues et micro-ripples naturels
+- pas d’eau “gelée” ou texture répétitive
+- écume crédible, pas “mousse en plastique”`
+  },
+  {
+    id: "sora.neg.014",
+    title: "Sora — Ciel/nuages réalistes",
+    tags: ["sora", "sky", "realism"],
+    body:
+`CIEL/NUAGES
+- nuages volumétriques crédibles
+- pas de banding
+- horizon net, brume atmosphérique réaliste`
+  },
+  ...[
+    ["015", "Aurore boréale (anti fake)", "sora,aurora,quality", `AURORE — ANTI FAKE\n- aurore progressive, organique, pas “néon”\n- reflets subtils sur eau/neige\n- étoiles stables, pas de scintillement`],
+    ["016", "Neige (anti texture répétée)", "sora,snow,quality", `NEIGE\n- grain fin + variations naturelles\n- pas de motifs répétitifs\n- traces crédibles si mouvement`],
+    ["017", "Forêt (anti shimmer feuilles)", "sora,forest,stability", `FORÊT\n- limiter moiré sur feuilles fines\n- vent cohérent, pas de tremblement numérique`],
+    ["018", "Pluie (anti overlay)", "sora,rain,realism", `PLUIE\n- pluie intégrée à la scène (pas overlay)\n- gouttes crédibles + reflets route\n- essuie-glaces si POV voiture (option)`],
+    ["019", "Brume (profondeur atmosphérique)", "sora,fog,cinema", `BRUME\n- couches atmosphériques, profondeur progressive\n- rayons de lumière plausibles, pas trop “god rays”`],
+    ["020", "Lens flare (discret)", "sora,lens,cinema", `LENS FLARE\n- discret, naturel, pas d’abus\n- cohérent avec angle de la source lumineuse`]
+  ].map(([n, title, tags, body]) => ({ id: `sora.neg.${n}`, title: `Sora — ${title}`, tags: tags.split(","), body })),
+  {
+    id: "sora.cam.001",
+    title: "Sora — Caméra drone cinématique (smooth follow)",
+    tags: ["sora", "camera", "drone", "cinema"],
+    body:
+`CAMÉRA (DRONE FOLLOW)
+- drone stable, vitesse modérée
+- follow derrière/sur le côté du sujet, hauteur variable douce
+- parallax visible (arbres/relief) pour profondeur
+- pas de zoom agressif`
+  },
+  {
+    id: "sora.cam.002",
+    title: "Sora — Dolly/travelling bas (épique)",
+    tags: ["sora", "camera", "dolly", "cinema"],
+    body:
+`CAMÉRA (DOLLY BAS)
+- travelling bas proche du sol
+- foreground (herbes/rochers) pour effet ciné
+- DOF naturelle (pas trop courte)
+- motion blur léger et réaliste`
+  },
+  {
+    id: "sora.cam.003",
+    title: "Sora — Steadycam romantique (proche)",
+    tags: ["sora", "camera", "steadycam", "romance"],
+    body:
+`CAMÉRA (STEADYCAM)
+- mouvements humains doux, stables
+- cadre intime, respiration visuelle
+- transitions lentes, pas de whip pan`
+  },
+  {
+    id: "sora.cam.004",
+    title: "Sora — Timelapse discret (nuages)",
+    tags: ["sora", "camera", "timelapse", "sky"],
+    body:
+`TIMELAPSE DISCRET
+- accélération subtile
+- nuages fluides, pas de saccades
+- exposition stable`
+  },
+  ...[
+    ["005", "14mm grand angle (immersion)", "14mm", "wide"],
+    ["006", "24mm paysage ciné", "24mm", "wide"],
+    ["007", "35mm naturel", "35mm", "normal"],
+    ["008", "50mm ciné portrait", "50mm", "normal"],
+    ["009", "85mm compression montagne", "85mm", "tele"],
+    ["010", "Macro détails nature", "macro", "macro"]
+  ].map(([n, label, lens, type]) => ({
+    id: `sora.cam.${n}`,
+    title: `Sora — Lens: ${label}`,
+    tags: ["sora", "lens", type],
+    body: `LENS\n- focale: ${lens}\n- bokeh naturel, pas artificiel\n- distorsion cohérente (surtout en grand angle)`
+  })),
+  ...[
+    ["sora.cam.061", "Whip pan (très contrôlé)", "sora,camera,whippan", `MOUVEMENT\n- whip pan rare, court, contrôlé\n- retomber sur un sujet clair\n- pas de motion smear excessif`],
+    ["sora.light.001", "Golden hour (ciné)", "sora,light,golden", `LUMIÈRE\n- golden hour chaude, ombres longues\n- flare discret, contraste doux\n- peau/objets non sur-saturés`],
+    ["sora.light.002", "Blue hour (magique)", "sora,light,bluehour", `LUMIÈRE\n- bleu profond, néons naturels si ville\n- haute dynamique, noirs propres`],
+    ["sora.light.003", "Nuit étoilée (propre)", "sora,light,night", `NUIT\n- étoiles stables, pas de scintillement\n- exposition réaliste (pas trop lumineuse)\n- silhouettes crédibles`],
+    ["sora.light.004", "Overcast doux (docu)", "sora,light,overcast", `LUMIÈRE\n- ciel couvert, diffusion douce\n- couleurs naturelles, pas gris “plat”`]
+  ].map(([id, title, tags, body]) => ({ id, title, tags: tags.split(","), body })),
+  {
+    id: "sora.shot.001",
+    title: "Sora — Shotlist 3 plans (paysage ciné)",
+    tags: ["sora", "shotlist", "landscape"],
+    body:
+`SHOTLIST (3 PLANS)
+Plan 1 — Establishing wide: paysage grandiose, caméra lente (drone ou dolly), lumière ciné.
+Plan 2 — Medium parallax: passage près d’un élément (arbres/rochers), profondeur.
+Plan 3 — Hero shot: angle fort + révélation (soleil, océan, sommet), fin stable.`
+  },
+  {
+    id: "sora.shot.002",
+    title: "Sora — Shotlist 5 plans (overland route)",
+    tags: ["sora", "shotlist", "overland"],
+    body:
+`SHOTLIST (5 PLANS)
+1) Drone follow arrière sur route (poussière/vent).
+2) Travelling latéral bas, roues + texture route.
+3) POV intérieur: mains au volant, lumière naturelle, route devant.
+4) Arrêt: ouverture coffre/tente (plans détails).
+5) Wide final: camp installé, feu doux, ciel dramatique.`
+  },
+  {
+    id: "sora.shot.003",
+    title: "Sora — Shotlist romance 4 plans (sans décrire personnages)",
+    tags: ["sora", "shotlist", "romance"],
+    body:
+`SHOTLIST (4 PLANS)
+1) Walk & talk: steadycam proche, intimiste, rires discrets.
+2) Regard: plan moyen, lumière douce, background bokeh naturel.
+3) Danse: travelling circulaire lent, émotion, continuité.
+4) Wide final: silhouette + paysage grandiose, fin calme.`
+  },
+  ...Array.from({ length: 37 }).map((_, i) => ({
+    id: `sora.shot.${String(4 + i).padStart(3, "0")}`,
+    title: `Sora — Shotlist squelette #${4 + i}`,
+    tags: ["sora", "shotlist", "skeleton"],
+    body:
+`SHOTLIST (SQUELETTE)
+Plan 1 — Establishing (wide)
+Plan 2 — Detail (macro/close)
+Plan 3 — Movement (follow/travel)
+Plan 4 — Hero shot (révélation)
+Plan 5 — Outro (stabilisé, respirant)`
+  })),
+  {
+    id: "codex.core.001",
+    title: "Codex — Prompt skeleton (ultra pro)",
+    tags: ["codex", "skeleton", "pro"],
+    body:
+`RÔLE
+Tu es un ingénieur logiciel senior. Tu minimises les régressions.
+
+OBJECTIF
+{GOAL}
+
+CONTEXTE
+{CONTEXT}
+
+ENTRÉES
+{INPUTS}
+
+CONTRAINTES
+{RULES}
+
+PLAN
+1) Analyse rapide + risques
+2) Stratégie (petits changements)
+3) Implémentation
+4) Vérifications
+5) Résumé des fichiers modifiés
+
+CRITÈRES D’ACCEPTATION
+- [ ] Fonctionne offline
+- [ ] Ne casse pas l’existant
+- [ ] Données localStorage backward compatible
+
+SORTIE
+Code complet uniquement des fichiers modifiés.`
+  },
+  {
+    id: "codex.core.002",
+    title: "Codex — Checklist QA (front-end)",
+    tags: ["codex", "qa", "checklist"],
+    body:
+`CHECKLIST QA
+- chemins/imports OK
+- pas d’erreurs console
+- mobile iPhone: champs utilisables, scroll OK
+- edge cases: champs vides, gros texte, caractères spéciaux
+- localStorage: migration OK, aucune perte
+- export/import: JSON valide, erreurs gérées
+- performance: pas de re-render inutile / boucles`
+  },
+  {
+    id: "codex.core.003",
+    title: "Codex — Plan patch en 6 étapes",
+    tags: ["codex", "plan", "patch"],
+    body:
+`PLAN (6 ÉTAPES)
+1) Lire structure existante + points d’extension
+2) Ajouter données/constantes (seed) sans toucher UI
+3) Ajouter logique (functions pures)
+4) Connecter UI existante (events) sans changement visuel
+5) Tests manuels (checklist)
+6) Résumer fichiers modifiés + pourquoi`
+  },
+  {
+    id: "codex.core.004",
+    title: "Codex — Définition of Done (DoD)",
+    tags: ["codex", "dod", "quality"],
+    body:
+`DEFINITION OF DONE
+- feature complète + stable
+- pas de régression UI/UX
+- erreurs gérées (try/catch JSON)
+- migration localStorage versionnée
+- export/import fonctionne
+- code lisible + commentaires utiles`
+  },
+  ...[
+    ["codex.safe.001", "Codex — Mode sécurité (anti casse)", "codex,safety", `MODE SÉCURITÉ\n- ne supprime aucun champ existant\n- garde les clés localStorage existantes (migration douce)\n- ajoute seulement (append) et fallback si manquant\n- si doute: log + comportement par défaut stable`],
+    ["codex.debug.001", "Codex — Bloc diagnostic (debug export)", "codex,debug", `DIAGNOSTIC\n- ajoute logs minimalistes (désactivables)\n- ajoute export debug (settings + versions + tailles localStorage)\n- ne log jamais de données sensibles (si applicable)`],
+    ["codex.mig.001", "Codex — Migration localStorage (pattern)", "codex,migration", `MIGRATION PATTERN\n- pb_schema_version (int)\n- switch(version) { case 0: migrate0to1(); case 1: ... }\n- toujours idempotent (rejouable)\n- jamais d’écrasement destructeur sans backup`],
+    ["codex.err.001", "Codex — Gestion d’erreurs UX", "codex,errors,ux", `ERREURS UX\n- si import JSON invalide: message clair + pas de crash\n- si champ requis vide: signaler sans bloquer\n- fallback sensés (template par défaut)`],
+    ["codex.perf.001", "Codex — Micro-optim front", "codex,performance", `PERF\n- éviter innerHTML massif en boucle si possible\n- limiter re-render: diff simple ou render partiel\n- debouncer sur search input (150–250ms)`]
+  ].map(([id, title, tags, body]) => ({ id, title, tags: tags.split(","), body })),
+  ...Array.from({ length: 30 }).map((_, i) => ({
+    id: `codex.extra.${String(i + 1).padStart(3, "0")}`,
+    title: `Codex — Bloc extra #${i + 1}`,
+    tags: ["codex", "block", "extra"],
+    body:
+`BLOC EXTRA (CODEx)
+- ajoute contraintes claires
+- précise fichiers à modifier / à éviter
+- exige “fichiers modifiés only” en sortie`
+  })),
+  {
+    id: "mix.block.001",
+    title: "Bloc — Format sortie (fichiers modifiés seulement)",
+    tags: ["codex", "format", "output"],
+    body:
+`FORMAT DE SORTIE
+- Donne uniquement le code complet des fichiers modifiés
+- Liste des fichiers modifiés + raison (1 ligne chacun)
+- Aucune explication longue`
+  },
+  {
+    id: "mix.block.002",
+    title: "Bloc — Contraintes (ne pas toucher UI)",
+    tags: ["codex", "sora", "constraint"],
+    body:
+`CONTRAINTE ABSOLUE
+- Ne pas modifier le UI existant (layout, styles, structure)
+- Ajouts uniquement (contenu / logique), intégration discrète`
+  },
+  {
+    id: "mix.block.003",
+    title: "Bloc — “Do/Don’t” vidéo (rapide)",
+    tags: ["sora", "video", "rules"],
+    body:
+`DO
+- mouvement caméra cinématique lent
+- lumière naturelle plausible
+- continuité cohérente
+
+DON’T
+- texte/watermark
+- glitch/morph
+- jump cuts illogiques`
+  },
+  ...Array.from({ length: 47 }).map((_, i) => ({
+    id: `mix.block.${String(4 + i).padStart(3, "0")}`,
+    title: `Bloc — Insert rapide #${4 + i}`,
+    tags: ["mix", "insert", "quick"],
+    body:
+`BLOC RAPIDE
+- Objectif clair
+- Contraintes claires
+- Étapes numérotées
+- Sortie attendue précise`
+  }))
+];
+
+const PB_BLOCK_GROUPS = [
+  { id: "grp_sora_negative", title: "Sora — Negative / Qualité", match: (b) => b.id.startsWith("sora.neg.") },
+  { id: "grp_sora_camera", title: "Sora — Caméra / Lumière", match: (b) => b.id.startsWith("sora.cam.") || b.id.startsWith("sora.light.") },
+  { id: "grp_sora_shot", title: "Sora — Shotlists", match: (b) => b.id.startsWith("sora.shot.") },
+  { id: "grp_codex_core", title: "Codex — Core / QA / Migration", match: (b) => b.id.startsWith("codex.") },
+  { id: "grp_mix", title: "Blocs — Mix / Insert", match: (b) => b.id.startsWith("mix.") }
+];
+
 const SORA_PRESETS = [
   { id: "p1", name: "forêt/lac overland", biome: "forêt", mood: "calm", weather: "clear", lighting: "golden hour", lens: "24mm", move: "dolly", shots: ["Survol lent d'un lac entouré de conifères", "Travelling bas sur rive humide", "Plan serré reflets et texture eau"] },
   { id: "p2", name: "bord de mer falaises", biome: "océan", mood: "awe", weather: "wind", lighting: "blue hour", lens: "35mm", move: "drone", shots: ["Plan large falaises + houle", "Glide latéral au ras des falaises", "Plan final horizon dramatique"] },
@@ -136,6 +479,30 @@ function defaultSettings(){
   };
 }
 
+function pbSeedBlocksIfMissing(){
+  const key = LS_KEYS.packs;
+  const verKey = "pb_blocks_seed_version_v1";
+
+  const existing = safeJSONParse(localStorage.getItem(key), []);
+  const existingVer = localStorage.getItem(verKey);
+  if(existingVer === PB_BLOCKS_SEED_VERSION && Array.isArray(existing) && existing.length > 50) return;
+
+  const map = new Map();
+  (Array.isArray(existing) ? existing : []).forEach((b) => {
+    const id = b?.id || b?.key;
+    if(!id) return;
+    const label = b?.label || b?.title || "";
+    const text = b?.text || b?.body || "";
+    map.set(id, { id, label, text, tags: Array.isArray(b?.tags) ? b.tags : [] });
+  });
+  PB_BLOCKS.forEach((b) => {
+    if(!map.has(b.id)) map.set(b.id, { id: b.id, label: b.title, text: b.body, tags: b.tags });
+  });
+
+  localStorage.setItem(key, JSON.stringify(Array.from(map.values())));
+  localStorage.setItem(verKey, PB_BLOCKS_SEED_VERSION);
+}
+
 function migrateStorage(){
   const version = Number(localStorage.getItem(LS_KEYS.schema) || 0);
   if(version >= SCHEMA_VERSION) return;
@@ -161,7 +528,11 @@ function loadTemplates(){
 function saveTemplates(arr){ localStorage.setItem(LS_KEYS.templates, JSON.stringify(arr)); }
 function loadPacks(){
   const p = safeJSONParse(localStorage.getItem(LS_KEYS.packs), []);
-  if(!Array.isArray(p) || p.length === 0){ localStorage.setItem(LS_KEYS.packs, JSON.stringify(PROMPT_BLOCKS_DEFAULT)); return PROMPT_BLOCKS_DEFAULT; }
+  if(!Array.isArray(p) || p.length === 0){
+    const defaults = [...PROMPT_BLOCKS_DEFAULT, ...PB_BLOCKS.map((b) => ({ id: b.id, label: b.title, text: b.body, tags: b.tags }))];
+    localStorage.setItem(LS_KEYS.packs, JSON.stringify(defaults));
+    return defaults;
+  }
   return p;
 }
 function savePacks(arr){ localStorage.setItem(LS_KEYS.packs, JSON.stringify(arr)); }
@@ -374,11 +745,16 @@ function applyImprovementsToPrompt(){
 function renderBlockChips(){
   const container = $("#blockChips");
   container.innerHTML = "";
-  loadPacks().forEach(block => {
+  const blocks = loadPacks();
+
+  const addChip = (block) => {
     const btn = document.createElement("button");
     btn.className = "chip";
-    btn.textContent = block.label;
-    btn.dataset.insert = `\n\n${block.text}\n`;
+    btn.textContent = block.label || block.title || block.id;
+    btn.dataset.insert = `
+
+${block.text || block.body || ""}
+`;
     btn.addEventListener("click", ()=>{
       const active = document.activeElement;
       if(active && (active.tagName === "TEXTAREA" || active.tagName === "INPUT")) insertAtCursor(active, btn.dataset.insert);
@@ -386,9 +762,21 @@ function renderBlockChips(){
       toast("Bloc inséré");
     });
     container.appendChild(btn);
-  });
-}
+  };
 
+  PB_BLOCK_GROUPS.forEach((group) => {
+    const groupBlocks = blocks.filter((b) => group.match({ id: b.id || "" }));
+    if(groupBlocks.length === 0) return;
+    const title = document.createElement("div");
+    title.className = "item-meta";
+    title.textContent = group.title;
+    container.appendChild(title);
+    groupBlocks.forEach(addChip);
+  });
+
+  const groupedIds = new Set(PB_BLOCK_GROUPS.flatMap((group) => blocks.filter((b) => group.match({ id: b.id || "" })).map((b) => b.id)));
+  blocks.filter((b) => !groupedIds.has(b.id)).forEach(addChip);
+}
 function renderSoraPresets(){
   const box = $("#soraPresets"); box.innerHTML = "";
   SORA_PRESETS.forEach(p => {
@@ -510,6 +898,7 @@ function initChips(){ $$(".chip[data-insert]").forEach(ch=>{ ch.addEventListener
 
 function init(){
   migrateStorage();
+  pbSeedBlocksIfMissing();
   window.__soraShots = [];
   const templates = loadTemplates();
   $("#toolKind").value = loadSettings().defaultType || "codex";
