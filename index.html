@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Prompt Builder — Sora + Codex (V1)</title>
+  <link rel="stylesheet" href="assets/styles.css" />
+  <meta name="theme-color" content="#0b1220" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo" aria-hidden="true">✦</div>
+      <div>
+        <div class="brand-title">Prompt Builder</div>
+        <div class="brand-sub">Mix Sora + Codex · Offline</div>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button id="btnQuickCopy" class="btn btn-ghost" title="Copier le prompt final">Copier</button>
+      <button id="btnExportTxt" class="btn btn-ghost" title="Exporter le prompt en .txt">.txt</button>
+      <button id="btnExportJson" class="btn btn-ghost" title="Exporter le projet en .json">.json</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="sidebar" aria-label="Navigation">
+      <nav class="nav">
+        <button class="nav-item active" data-view="builder">Créer</button>
+        <button class="nav-item" data-view="templates">Templates</button>
+        <button class="nav-item" data-view="history">Historique</button>
+        <button class="nav-item" data-view="settings">Paramètres</button>
+      </nav>
+
+      <section class="panel">
+        <div class="panel-title">Template actif</div>
+        <select id="templateSelect" class="select"></select>
+        <div class="row gap">
+          <button id="btnNewFromTemplate" class="btn btn-primary">Nouveau</button>
+          <button id="btnSaveToHistory" class="btn btn-secondary">Sauver</button>
+        </div>
+        <div class="hint">
+          Astuce: utilise des variables comme <code>{LIEU}</code>, <code>{STYLE}</code>, <code>{DUREE}</code>. Elles seront remplacées automatiquement.
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-title">Outils rapides</div>
+        <div class="row gap wrap">
+          <button class="chip" data-insert="{LIEU}">{LIEU}</button>
+          <button class="chip" data-insert="{SUJET}">{SUJET}</button>
+          <button class="chip" data-insert="{STYLE}">{STYLE}</button>
+          <button class="chip" data-insert="{DUREE}">{DUREE}</button>
+          <button class="chip" data-insert="{FORMAT}">{FORMAT}</button>
+          <button class="chip" data-insert="{CONTRAINTES}">{CONTRAINTES}</button>
+        </div>
+      </section>
+    </aside>
+
+    <section class="content">
+      <!-- BUILDER -->
+      <section id="view-builder" class="view active">
+        <div class="grid2">
+          <section class="card">
+            <div class="card-title">Champs guidés</div>
+
+            <div class="field">
+              <label for="toolKind">Type</label>
+              <select id="toolKind" class="select">
+                <option value="codex">Codex</option>
+                <option value="sora">Sora</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="goal">Objectif</label>
+              <textarea id="goal" class="textarea" rows="2" placeholder="Ex: Ajouter une page Map 3D / Générer un clip ultra réaliste..."></textarea>
+            </div>
+
+            <div class="field">
+              <label for="context">Contexte</label>
+              <textarea id="context" class="textarea" rows="3" placeholder="Ce qui existe déjà / liens / contraintes de projet / ce qu'on ne doit PAS toucher..."></textarea>
+            </div>
+
+            <div class="field">
+              <label for="inputs">Entrées (données fournies)</label>
+              <textarea id="inputs" class="textarea" rows="3" placeholder="Ex: URL repo, captures, liste de features, assets disponibles..."></textarea>
+            </div>
+
+            <div class="field">
+              <label for="rules">Contraintes & règles</label>
+              <textarea id="rules" class="textarea" rows="4" placeholder="Ex: Ne pas toucher au UI existant, offline-first, mobile-first, etc."></textarea>
+            </div>
+
+            <div class="field">
+              <label for="steps">Étapes demandées</label>
+              <textarea id="steps" class="textarea" rows="4" placeholder="Ex: 1) Créer page, 2) Ajouter bouton, 3) Tester, 4) Mettre backup..."></textarea>
+            </div>
+
+            <div class="field">
+              <label for="outputFormat">Format de sortie</label>
+              <input id="outputFormat" class="input" placeholder="Ex: livrer un ZIP, fichiers listés, instructions, etc." />
+            </div>
+
+            <div class="row gap">
+              <button id="btnReset" class="btn btn-ghost">Réinitialiser</button>
+              <button id="btnGenerate" class="btn btn-primary">Générer prompt</button>
+            </div>
+
+            <div class="small muted">
+              La génération ici = assemblage structuré (pas d'IA). Tu gardes 100% le contrôle.
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="card-title">Aperçu du prompt final</div>
+            <div class="row gap wrap">
+              <button id="btnCopy" class="btn btn-secondary">Copier</button>
+              <button id="btnFavorite" class="btn btn-ghost" title="Ajouter aux favoris">⭐ Favori</button>
+              <button id="btnTidy" class="btn btn-ghost" title="Nettoyer la mise en forme">Nettoyer</button>
+            </div>
+            <textarea id="finalPrompt" class="textarea mono" rows="22" spellcheck="false"></textarea>
+            <div class="small muted">
+              Tu peux éditer directement le prompt final (zone ci-dessus). Le sauvegarde le gardera tel quel.
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <!-- TEMPLATES -->
+      <section id="view-templates" class="view">
+        <div class="grid2">
+          <section class="card">
+            <div class="card-title">Templates</div>
+            <div class="row gap">
+              <input id="tplSearch" class="input" placeholder="Rechercher (nom, tags)..." />
+              <button id="btnTplNew" class="btn btn-primary">+ Nouveau</button>
+            </div>
+            <div id="tplList" class="list"></div>
+            <div class="small muted">Les templates sont stockés en local (localStorage).</div>
+          </section>
+
+          <section class="card">
+            <div class="card-title">Éditeur de template</div>
+
+            <div class="field">
+              <label for="tplName">Nom</label>
+              <input id="tplName" class="input" placeholder="Ex: Codex — Ajouter une page sans toucher au UI" />
+            </div>
+
+            <div class="field">
+              <label for="tplTags">Tags (séparés par virgule)</label>
+              <input id="tplTags" class="input" placeholder="codex, ui, refactor, sora, video..." />
+            </div>
+
+            <div class="field">
+              <label for="tplBody">Corps (avec variables)</label>
+              <textarea id="tplBody" class="textarea mono" rows="14" spellcheck="false"></textarea>
+            </div>
+
+            <div class="row gap">
+              <button id="btnTplSave" class="btn btn-secondary">Sauver</button>
+              <button id="btnTplDelete" class="btn btn-ghost danger">Supprimer</button>
+            </div>
+
+            <div class="hint">
+              Variables recommandées: <code>{GOAL}</code> <code>{CONTEXT}</code> <code>{INPUTS}</code> <code>{RULES}</code> <code>{STEPS}</code> <code>{FORMAT}</code>.
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <!-- HISTORY -->
+      <section id="view-history" class="view">
+        <section class="card">
+          <div class="card-title">Historique</div>
+          <div class="row gap">
+            <input id="histSearch" class="input" placeholder="Rechercher..." />
+            <button id="btnHistClear" class="btn btn-ghost danger">Vider</button>
+          </div>
+          <div id="histList" class="list"></div>
+          <div class="small muted">Clique un item pour le recharger dans l’éditeur.</div>
+        </section>
+      </section>
+
+      <!-- SETTINGS -->
+      <section id="view-settings" class="view">
+        <section class="card">
+          <div class="card-title">Paramètres</div>
+          <div class="field">
+            <label for="prefDefaultType">Type par défaut</label>
+            <select id="prefDefaultType" class="select">
+              <option value="codex">Codex</option>
+              <option value="sora">Sora</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label>Remplacement de variables rapides</label>
+            <div class="grid2">
+              <div class="field">
+                <label for="varLieu">{LIEU}</label>
+                <input id="varLieu" class="input" placeholder="Ex: forêt boréale, bord de mer..." />
+              </div>
+              <div class="field">
+                <label for="varSujet">{SUJET}</label>
+                <input id="varSujet" class="input" placeholder="Ex: scène overland, UI app..." />
+              </div>
+              <div class="field">
+                <label for="varStyle">{STYLE}</label>
+                <input id="varStyle" class="input" placeholder="Ex: ultra réaliste, cinématique..." />
+              </div>
+              <div class="field">
+                <label for="varDuree">{DUREE}</label>
+                <input id="varDuree" class="input" placeholder="Ex: 10s, 30s..." />
+              </div>
+              <div class="field">
+                <label for="varFormat">{FORMAT}</label>
+                <input id="varFormat" class="input" placeholder="Ex: livrer en ZIP, code complet..." />
+              </div>
+              <div class="field">
+                <label for="varContraintes">{CONTRAINTES}</label>
+                <input id="varContraintes" class="input" placeholder="Ex: ne pas toucher UI, pas de logo..." />
+              </div>
+            </div>
+          </div>
+
+          <div class="row gap">
+            <button id="btnSettingsSave" class="btn btn-primary">Sauver paramètres</button>
+            <button id="btnFactoryReset" class="btn btn-ghost danger">Reset complet</button>
+          </div>
+
+          <div class="hint">
+            Tout reste sur ton appareil (localStorage). Aucune donnée envoyée.
+          </div>
+        </section>
+      </section>
+    </section>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="assets/app.js"></script>
+</body>
+</html>
