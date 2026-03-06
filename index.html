@@ -32,6 +32,20 @@
         <button class="nav-item" data-view="settings">Paramètres</button>
       </nav>
 
+      <section id="projectPanel" class="panel">
+        <div class="panel-title">Projet actif</div>
+        <select id="projectSelect" class="select"></select>
+        <div class="row gap wrap" style="margin-top:10px;">
+          <button id="btnProjectNew" class="btn btn-primary">Créer</button>
+          <button id="btnProjectRename" class="btn btn-ghost">Renommer</button>
+          <button id="btnProjectDelete" class="btn btn-ghost danger">Supprimer</button>
+        </div>
+        <div id="projectDescription" class="hint"></div>
+        <div class="field" style="margin-top:8px;"><label for="projectVarLieu">{LIEU} projet</label><input id="projectVarLieu" class="input" /></div>
+        <div class="field"><label for="projectVarStyle">{STYLE} projet</label><input id="projectVarStyle" class="input" /></div>
+        <div class="row gap wrap"><button id="btnProjectVarsSave" class="btn btn-ghost">Sauver variables projet</button><button id="btnProjectPresetSave" class="btn btn-ghost">Sauver preset Sora projet</button></div>
+      </section>
+
       <section class="panel">
         <div class="panel-title">Template actif</div>
         <select id="templateSelect" class="select"></select>
@@ -39,9 +53,7 @@
           <button id="btnNewFromTemplate" class="btn btn-primary">Nouveau</button>
           <button id="btnSaveToHistory" class="btn btn-secondary">Sauver</button>
         </div>
-        <div class="hint">
-          Astuce: utilise des variables comme <code>{LIEU}</code>, <code>{STYLE}</code>, <code>{DUREE}</code>. Elles seront remplacées automatiquement.
-        </div>
+        <div class="hint">Astuce: utilise des variables comme <code>{LIEU}</code>, <code>{STYLE}</code>, <code>{DUREE}</code>.</div>
       </section>
 
       <section class="panel">
@@ -58,6 +70,18 @@
 
       <section class="panel">
         <div class="panel-title">Insérer bloc</div>
+        <div class="row gap" style="margin-bottom:8px;">
+          <input id="blockSearch" class="input" placeholder="Rechercher bloc" />
+          <select id="blockGroup" class="select">
+            <option value="all">Tous</option>
+            <option value="anti">Anti-artefacts</option>
+            <option value="cam">Caméra/Lens/Lumière</option>
+            <option value="shot">Shotlist</option>
+            <option value="qa">Codex QA</option>
+            <option value="dod">DoD</option>
+            <option value="risk">Risques</option>
+          </select>
+        </div>
         <div id="blockChips" class="row gap wrap"></div>
       </section>
     </aside>
@@ -67,7 +91,6 @@
         <div class="grid2">
           <section class="card">
             <div class="card-title">Champs guidés</div>
-
             <div class="field">
               <label for="toolKind">Type</label>
               <select id="toolKind" class="select">
@@ -75,36 +98,12 @@
                 <option value="sora">Sora</option>
               </select>
             </div>
-
-            <div class="field">
-              <label for="goal">Objectif</label>
-              <textarea id="goal" class="textarea" rows="2" placeholder="Ex: Ajouter une page Map 3D / Générer un clip ultra réaliste..."></textarea>
-            </div>
-
-            <div class="field">
-              <label for="context">Contexte</label>
-              <textarea id="context" class="textarea" rows="3" placeholder="Ce qui existe déjà / liens / contraintes de projet / ce qu'on ne doit PAS toucher..."></textarea>
-            </div>
-
-            <div class="field">
-              <label for="inputs">Entrées (données fournies)</label>
-              <textarea id="inputs" class="textarea" rows="3" placeholder="Ex: URL repo, captures, liste de features, assets disponibles..."></textarea>
-            </div>
-
-            <div class="field">
-              <label for="rules">Contraintes & règles</label>
-              <textarea id="rules" class="textarea" rows="4" placeholder="Ex: Ne pas toucher au UI existant, offline-first, mobile-first, etc."></textarea>
-            </div>
-
-            <div class="field">
-              <label for="steps">Étapes demandées</label>
-              <textarea id="steps" class="textarea" rows="4" placeholder="Ex: 1) Créer page, 2) Ajouter bouton, 3) Tester, 4) Mettre backup..."></textarea>
-            </div>
-
-            <div class="field">
-              <label for="outputFormat">Format de sortie</label>
-              <input id="outputFormat" class="input" placeholder="Ex: livrer un ZIP, fichiers listés, instructions, etc." />
-            </div>
+            <div class="field"><label for="goal">Objectif</label><textarea id="goal" class="textarea" rows="2"></textarea></div>
+            <div class="field"><label for="context">Contexte</label><textarea id="context" class="textarea" rows="3"></textarea></div>
+            <div class="field"><label for="inputs">Entrées</label><textarea id="inputs" class="textarea" rows="3"></textarea></div>
+            <div class="field"><label for="rules">Contraintes & règles</label><textarea id="rules" class="textarea" rows="4"></textarea></div>
+            <div class="field"><label for="steps">Étapes demandées</label><textarea id="steps" class="textarea" rows="4"></textarea></div>
+            <div class="field"><label for="outputFormat">Format de sortie</label><input id="outputFormat" class="input" /></div>
 
             <section id="codexProSection" class="panel" style="margin-top:10px;">
               <div class="panel-title">Codex Pro</div>
@@ -121,41 +120,39 @@
                 <div class="row gap wrap">
                   <label><input class="codexConstraint" type="checkbox" value="Ne pas toucher UI" checked /> UI strict</label>
                   <label><input class="codexConstraint" type="checkbox" value="Pas de dépendances externes" checked /> Sans dépendances</label>
-                  <label><input class="codexConstraint" type="checkbox" value="Offline-first" checked /> Offline-first</label>
-                  <label><input class="codexConstraint" type="checkbox" value="Compat iPhone" checked /> iPhone</label>
-                  <label><input class="codexConstraint" type="checkbox" value="Backward compatible localStorage" checked /> Backward compat</label>
+                  <label><input class="codexConstraint" type="checkbox" value="Offline-first" checked /> Offline</label>
+                  <label><input class="codexConstraint" type="checkbox" value="Compat iPhone Safari + PC Chrome/Edge" checked /> Compat devices</label>
+                  <label><input class="codexConstraint" type="checkbox" value="Backward localStorage" checked /> Backward storage</label>
                 </div>
               </div>
-              <div class="field"><label for="codexRisks">Bloc risques</label><textarea id="codexRisks" class="textarea" rows="2"></textarea></div>
-              <div class="field"><label for="codexFiles">Bloc fichiers (modifier/éviter)</label><textarea id="codexFiles" class="textarea" rows="2"></textarea></div>
-              <div class="field"><label for="codexDod">Definition of done</label><textarea id="codexDod" class="textarea" rows="2"></textarea></div>
+              <div class="field"><label for="codexRisks">Risques</label><textarea id="codexRisks" class="textarea" rows="2"></textarea></div>
+              <div class="field"><label for="codexFiles">Fichiers à modifier / éviter</label><textarea id="codexFiles" class="textarea" rows="2"></textarea></div>
+              <div class="field"><label for="codexDod">Definition of Done</label><textarea id="codexDod" class="textarea" rows="2"></textarea></div>
               <button id="btnGenerateCodexPro" class="btn btn-secondary">Générer prompt Codex Pro</button>
             </section>
 
-            <section id="soraStudioSection" class="panel" style="margin-top:10px; display:none;">
+            <section id="soraStudioSection" class="panel" style="margin-top:10px;">
               <div class="panel-title">Sora Studio</div>
               <div class="grid2">
-                <div class="field"><label for="soraDuration">Durée</label><select id="soraDuration" class="select"><option>10s</option><option>15s</option><option>30s</option><option value="custom">custom</option></select></div>
-                <div class="field"><label for="soraDurationCustom">Durée custom</label><input id="soraDurationCustom" class="input" placeholder="Ex: 22s" /></div>
+                <div class="field"><label for="soraDuration">Durée</label><select id="soraDuration" class="select"><option>10s</option><option>15s</option><option>20s</option><option value="custom">Custom</option></select></div>
+                <div class="field"><label for="soraDurationCustom">Durée custom</label><input id="soraDurationCustom" class="input" /></div>
                 <div class="field"><label for="soraRatio">Ratio</label><select id="soraRatio" class="select"><option>16:9</option><option>9:16</option><option>1:1</option></select></div>
                 <div class="field"><label for="soraFps">FPS</label><select id="soraFps" class="select"><option>24</option><option>30</option><option>60</option></select></div>
-                <div class="field"><label for="soraLens">Lens</label><select id="soraLens" class="select"><option>14mm</option><option>24mm</option><option>35mm</option><option>50mm</option><option>85mm</option></select></div>
-                <div class="field"><label for="soraCameraMove">Mouvement caméra</label><select id="soraCameraMove" class="select"><option>drone</option><option>steadycam</option><option>dolly</option><option>crane</option><option>handheld soft</option><option>timelapse</option></select></div>
-                <div class="field"><label for="soraLighting">Lighting</label><select id="soraLighting" class="select"><option>golden hour</option><option>blue hour</option><option>overcast</option><option>night</option><option>neon city</option><option>storm backlight</option></select></div>
-                <div class="field"><label for="soraWeather">Weather</label><select id="soraWeather" class="select"><option>clear</option><option>fog</option><option>rain</option><option>snow</option><option>wind</option></select></div>
-                <div class="field"><label for="soraMood">Mood</label><select id="soraMood" class="select"><option>calm</option><option>awe</option><option>romantic</option><option>epic</option><option>mysterious</option></select></div>
-                <div class="field"><label for="soraContinuity">Continuity level</label><select id="soraContinuity" class="select"><option>low</option><option>medium</option><option selected>high</option></select></div>
+                <div class="field"><label for="soraLens">Lens</label><select id="soraLens" class="select"><option>24mm</option><option>35mm</option><option>50mm</option></select></div>
+                <div class="field"><label for="soraCameraMove">Mouvement caméra</label><select id="soraCameraMove" class="select"><option>drone</option><option>dolly</option><option>steadycam</option><option>tracking</option></select></div>
+                <div class="field"><label for="soraLighting">Lumière</label><select id="soraLighting" class="select"><option>golden hour</option><option>blue hour</option><option>night</option><option>overcast</option></select></div>
+                <div class="field"><label for="soraWeather">Météo</label><select id="soraWeather" class="select"><option>clear</option><option>wind</option><option>fog</option><option>rain</option><option>snow</option></select></div>
+                <div class="field"><label for="soraMood">Mood</label><select id="soraMood" class="select"><option>awe</option><option>romantic</option><option>epic</option><option>mysterious</option><option>cozy</option></select></div>
+                <div class="field"><label for="soraContinuity">Continuity level</label><select id="soraContinuity" class="select"><option>low</option><option>med</option><option selected>high</option></select></div>
                 <div class="field"><label for="soraDetail">Detail level</label><select id="soraDetail" class="select"><option>low</option><option>med</option><option selected>high</option></select></div>
               </div>
               <div class="field"><label for="soraNegativeList">Negative list</label><textarea id="soraNegativeList" class="textarea" rows="2"></textarea></div>
-              <div class="field">
-                <div class="row gap wrap">
-                  <button id="btnSoraAddShot" class="btn btn-ghost" type="button">+ Ajouter plan</button>
-                  <button id="btnSoraRandomPro" class="btn btn-ghost" type="button">Random pro</button>
-                  <button id="btnSoraAuto" class="btn btn-secondary" type="button">Générer Sora Studio (auto)</button>
-                </div>
+              <div class="row gap wrap">
+                <button id="btnSoraAddShot" class="btn btn-ghost" type="button">+ Ajouter plan</button>
+                <button id="btnSoraRandomPro" class="btn btn-ghost" type="button">Random pro</button>
+                <button id="btnSoraAuto" class="btn btn-secondary" type="button">Générer Sora Studio (auto)</button>
               </div>
-              <div id="soraPresets" class="row gap wrap"></div>
+              <div id="soraPresets" class="row gap wrap" style="margin-top:10px;"></div>
               <div id="soraShotList" class="list"></div>
             </section>
 
@@ -163,26 +160,19 @@
               <button id="btnReset" class="btn btn-ghost">Réinitialiser</button>
               <button id="btnGenerate" class="btn btn-primary">Générer prompt</button>
             </div>
-
-            <div class="small muted">
-              La génération ici = assemblage structuré (pas d'IA). Tu gardes 100% le contrôle.
-            </div>
           </section>
 
           <section class="card">
             <div class="card-title">Aperçu du prompt final</div>
             <div class="row gap wrap">
               <button id="btnCopy" class="btn btn-secondary">Copier</button>
-              <button id="btnFavorite" class="btn btn-ghost" title="Ajouter aux favoris">⭐ Favori</button>
-              <button id="btnTidy" class="btn btn-ghost" title="Nettoyer la mise en forme">Nettoyer</button>
+              <button id="btnFavorite" class="btn btn-ghost">⭐ Favori</button>
+              <button id="btnTidy" class="btn btn-ghost">Nettoyer</button>
               <button id="btnAnalyzePrompt" class="btn btn-ghost">Analyser prompt</button>
               <button id="btnApplyImprovements" class="btn btn-ghost">Appliquer améliorations</button>
             </div>
             <textarea id="finalPrompt" class="textarea mono" rows="22" spellcheck="false"></textarea>
             <div id="analysisResult" class="hint"></div>
-            <div class="small muted">
-              Tu peux éditer directement le prompt final (zone ci-dessus). La sauvegarde le gardera telle quelle.
-            </div>
           </section>
         </div>
       </section>
@@ -196,34 +186,15 @@
               <button id="btnTplNew" class="btn btn-primary">+ Nouveau</button>
             </div>
             <div id="tplList" class="list"></div>
-            <div class="small muted">Les templates sont stockés en local (localStorage).</div>
           </section>
-
           <section class="card">
             <div class="card-title">Éditeur de template</div>
-
-            <div class="field">
-              <label for="tplName">Nom</label>
-              <input id="tplName" class="input" placeholder="Ex: Codex — Ajouter une page sans toucher au UI" />
-            </div>
-
-            <div class="field">
-              <label for="tplTags">Tags (séparés par virgule)</label>
-              <input id="tplTags" class="input" placeholder="codex, ui, refactor, sora, video..." />
-            </div>
-
-            <div class="field">
-              <label for="tplBody">Corps (avec variables)</label>
-              <textarea id="tplBody" class="textarea mono" rows="14" spellcheck="false"></textarea>
-            </div>
-
+            <div class="field"><label for="tplName">Nom</label><input id="tplName" class="input" /></div>
+            <div class="field"><label for="tplTags">Tags</label><input id="tplTags" class="input" /></div>
+            <div class="field"><label for="tplBody">Corps</label><textarea id="tplBody" class="textarea mono" rows="14" spellcheck="false"></textarea></div>
             <div class="row gap">
               <button id="btnTplSave" class="btn btn-secondary">Sauver</button>
               <button id="btnTplDelete" class="btn btn-ghost danger">Supprimer</button>
-            </div>
-
-            <div class="hint">
-              Variables recommandées: <code>{GOAL}</code> <code>{CONTEXT}</code> <code>{INPUTS}</code> <code>{RULES}</code> <code>{STEPS}</code> <code>{FORMAT}</code>.
             </div>
           </section>
         </div>
@@ -234,10 +205,10 @@
           <div class="card-title">Historique</div>
           <div class="row gap">
             <input id="histSearch" class="input" placeholder="Rechercher..." />
+            <select id="historyScope" class="select"><option value="project">Projet actif</option><option value="global">Voir global</option></select>
             <button id="btnHistClear" class="btn btn-ghost danger">Vider</button>
           </div>
           <div id="histList" class="list"></div>
-          <div class="small muted">Clique un item pour le recharger dans l’éditeur.</div>
         </section>
       </section>
 
@@ -246,47 +217,75 @@
           <div class="card-title">Paramètres</div>
           <div class="field">
             <label for="prefDefaultType">Type par défaut</label>
-            <select id="prefDefaultType" class="select">
-              <option value="codex">Codex</option>
-              <option value="sora">Sora</option>
-            </select>
+            <select id="prefDefaultType" class="select"><option value="codex">Codex</option><option value="sora">Sora</option></select>
           </div>
 
           <div class="field">
-            <label>Remplacement de variables rapides</label>
-            <div class="grid2">
-              <div class="field"><label for="varLieu">{LIEU}</label><input id="varLieu" class="input" placeholder="Ex: forêt boréale, bord de mer..." /></div>
-              <div class="field"><label for="varSujet">{SUJET}</label><input id="varSujet" class="input" placeholder="Ex: scène overland, UI app..." /></div>
-              <div class="field"><label for="varStyle">{STYLE}</label><input id="varStyle" class="input" placeholder="Ex: ultra réaliste, cinématique..." /></div>
-              <div class="field"><label for="varDuree">{DUREE}</label><input id="varDuree" class="input" placeholder="Ex: 10s, 30s..." /></div>
-              <div class="field"><label for="varFormat">{FORMAT}</label><input id="varFormat" class="input" placeholder="Ex: livrer en ZIP, code complet..." /></div>
-              <div class="field"><label for="varContraintes">{CONTRAINTES}</label><input id="varContraintes" class="input" placeholder="Ex: ne pas toucher UI, pas de logo..." /></div>
-            </div>
-          </div>
-
-          <div class="field">
-            <label>Packs & templates</label>
+            <label>Feature flags</label>
             <div class="row gap wrap">
-              <button id="btnExportTemplates" class="btn btn-ghost">Export Templates (.json)</button>
-              <button id="btnImportTemplatesMerge" class="btn btn-ghost">Import Templates (fusion)</button>
-              <button id="btnImportTemplatesReplace" class="btn btn-ghost">Import Templates (remplacer)</button>
-              <button id="btnExportPacks" class="btn btn-ghost">Export Packs (.json)</button>
-              <button id="btnImportPacks" class="btn btn-ghost">Import Packs (.json)</button>
+              <label><input id="flagSoraStudio" type="checkbox" /> Sora Studio</label>
+              <label><input id="flagCodexPro" type="checkbox" /> Codex Pro</label>
+              <label><input id="flagAnalyzer" type="checkbox" /> Analyseur prompt</label>
+              <label><input id="flagProjects" type="checkbox" /> Projets</label>
+              <label><input id="flagDebug" type="checkbox" /> Debug</label>
             </div>
+          </div>
+
+          <div class="field">
+            <label>Variables rapides</label>
+            <div class="grid2">
+              <div class="field"><label for="varLieu">{LIEU}</label><input id="varLieu" class="input" /></div>
+              <div class="field"><label for="varSujet">{SUJET}</label><input id="varSujet" class="input" /></div>
+              <div class="field"><label for="varStyle">{STYLE}</label><input id="varStyle" class="input" /></div>
+              <div class="field"><label for="varDuree">{DUREE}</label><input id="varDuree" class="input" /></div>
+              <div class="field"><label for="varFormat">{FORMAT}</label><input id="varFormat" class="input" /></div>
+              <div class="field"><label for="varContraintes">{CONTRAINTES}</label><input id="varContraintes" class="input" /></div>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Import / Export complet</label>
+            <div class="row gap wrap">
+              <button id="btnExportFull" class="btn btn-ghost">Export complet JSON</button>
+              <button id="btnImportFull" class="btn btn-ghost">Import complet JSON</button>
+              <button id="btnExportProjects" class="btn btn-ghost">Export projets</button>
+              <button id="btnImportProjects" class="btn btn-ghost">Import projets</button>
+              <button id="btnExportTemplates" class="btn btn-ghost">Export templates</button>
+              <button id="btnImportTemplatesMerge" class="btn btn-ghost">Import templates</button>
+              <button id="btnExportPacks" class="btn btn-ghost">Export packs</button>
+              <button id="btnImportPacks" class="btn btn-ghost">Import packs</button>
+            </div>
+            <input id="fileImportFull" type="file" accept="application/json" style="display:none" />
             <input id="fileTemplates" type="file" accept="application/json" style="display:none" />
             <input id="filePacks" type="file" accept="application/json" style="display:none" />
+            <input id="fileProjects" type="file" accept="application/json" style="display:none" />
           </div>
+
+          <section id="debugPanel" class="panel" style="display:none; margin:10px 0;">
+            <div class="panel-title">Diagnostic local</div>
+            <button id="btnDebugExport" class="btn btn-ghost">Exporter debug</button>
+          </section>
 
           <div class="row gap">
             <button id="btnSettingsSave" class="btn btn-primary">Sauver paramètres</button>
             <button id="btnFactoryReset" class="btn btn-ghost danger">Reset complet</button>
           </div>
-
           <div class="hint">Tout reste sur ton appareil (localStorage). Aucune donnée envoyée.</div>
         </section>
       </section>
     </section>
   </main>
+
+  <div id="importModal" class="panel" style="display:none; position:fixed; inset:20% 10%; z-index:20;">
+    <div class="panel-title">Import JSON</div>
+    <div class="hint">Choisis le mode d'import: fusionner (merge par id) ou remplacer (wipe puis import).</div>
+    <div id="importModeHint" class="small muted" style="margin-top:8px;"></div>
+    <div class="row gap" style="margin-top:12px;">
+      <button id="btnImportMerge" class="btn btn-secondary">Fusionner</button>
+      <button id="btnImportReplace" class="btn btn-primary">Remplacer</button>
+      <button id="btnImportCancel" class="btn btn-ghost">Annuler</button>
+    </div>
+  </div>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
