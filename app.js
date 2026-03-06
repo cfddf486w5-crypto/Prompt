@@ -94,13 +94,22 @@ function renderIaRecommendations() {
     sug.innerHTML = `<div class="item-title">Améliorations proposées</div><div class="item-meta">${escapeHtml(draft.suggestions.join(" • "))}</div>`;
     wrap.appendChild(sug);
   }
+
+  const memory = loadIaDraft();
+  const memoryMeta = document.createElement("div");
+  const prevCount = memory?.generationHistory?.length || 0;
+  const favCount = memory?.favorites?.length || 0;
+  const presetCount = memory?.presets?.length || 0;
+  memoryMeta.className = "item";
+  memoryMeta.innerHTML = `<div class="item-title">Mémoire locale</div><div class="item-meta">Historique récent: ${prevCount} · Favoris: ${favCount} · Presets: ${presetCount}</div>`;
+  wrap.appendChild(memoryMeta);
 }
 
 function generateIaPrompt() {
   if (!iaEngine) return;
   const draft = activeIaDraft() || iaEngine.createDraft($("#iaBrief")?.value || "");
   const selectedKey = document.querySelector('input[name="iaReco"]:checked')?.value;
-  const selectedQuestion = draft.suggestedQuestions.find((q) => q.key === selectedKey);
+  const selectedQuestion = (draft.suggestedQuestions || []).find((q) => q.key === selectedKey);
   if (selectedQuestion) iaEngine.answerQuestion(draft, selectedQuestion.key, "à préciser / répondre plus tard");
 
   draft.toolTarget = $("#iaMode")?.value || draft.toolTarget;
@@ -112,32 +121,84 @@ function generateIaPrompt() {
   const exported = iaEngine.exportModule(draft);
   const modeA = $("#iaMode")?.value || "codex";
   const modeB = $("#iaMode2")?.value || "sora";
+  const contradictions = (exported.contradictions || []).length ? exported.contradictions.join("\n- ") : "Aucune contradiction détectée";
+  const examples = (exported.examples || []).map((e, idx) => `${idx + 1}. ${e}`).join("\n") || "Aucun exemple disponible";
+  const variantsBatch = (draft.promptVariants.batch || []).map((v, idx) => `VARIANTE ${idx + 1}\n${v}`).join("\n\n");
+
   const final = normalizeSpaces(`PROMPT ASSISTANT (${modeA.toUpperCase()} + ${modeB.toUpperCase()})
 
-Version Pro
-${draft.promptVariants.full}
+Mode actif
+${draft.generationModeLabel || "mode standard"}
 
-Version courte
-${draft.promptVariants.short}
+Version finale raffinée
+${draft.finalPrompt}
 
-Version XL
-${draft.promptVariants.xl}
+Version maître
+${draft.promptVariants.master || ""}
 
-Version technique
-${draft.promptVariants.technical}
+Version simple
+${draft.promptVariants.simple || draft.promptVariants.short || ""}
 
-Score qualité: ${draft.score.global}/100 (clarté ${draft.score.clarity}, complétude ${draft.score.completeness}, exécution ${draft.score.executionReadiness}, ambiguïté ${draft.score.ambiguityRisk})
+Variantes multi-génération
+${variantsBatch}
 
-Checklist
+Score qualité détaillé: ${draft.score.global}/100
+- Clarté: ${draft.score.clarity}
+- Profondeur: ${draft.score.depth}
+- Contexte: ${draft.score.context}
+- Complétude: ${draft.score.completeness}
+- Exécution: ${draft.score.executionReadiness}
+- Actionnable: ${draft.score.actionable}
+- Richesse contraintes: ${draft.score.constraintsRichness}
+- Adéquation outil: ${draft.score.toolFit}
+- Risque ambiguïté: ${draft.score.ambiguityRisk}
+
+Détection contradictions
+- ${contradictions}
+
+Suggestions de renforcement
+- ${(draft.suggestions || []).join("\n- ")}
+
+Exemples inspirants
+${examples}
+
+Checklist projet
 ${exported.checklist}
+
+Résumé projet
+${exported.summary}
 
 FAQ
 ${exported.faq}`);
 
   draft.finalPrompt = final;
   draft.history = draft.history || [];
-  draft.history.unshift({ at: nowISO(), toolTarget: draft.toolTarget, score: draft.score.global, prompt: draft.promptVariants.full });
+  draft.history.unshift({ at: nowISO(), toolTarget: draft.toolTarget, score: draft.score.global, mode: draft.generationMode, prompt: draft.promptVariants.full });
   draft.history = draft.history.slice(0, 30);
+  draft.favorites = draft.favorites || [];
+  const favoriteKey = quickHash(`${draft.toolTarget}|${draft.extractedInfo.tone}|${draft.extractedInfo.outputLength}|${draft.extractedInfo.deliveryFormat}|${draft.generationMode}`);
+  if (!draft.favorites.find((f) => f.key === favoriteKey)) {
+    draft.favorites.unshift({
+      key: favoriteKey,
+      label: `${draft.toolTarget.toUpperCase()} · ${draft.generationModeLabel}`,
+      tone: draft.extractedInfo.tone,
+      depth: draft.extractedInfo.outputLength,
+      output: draft.extractedInfo.deliveryFormat,
+      mode: draft.generationMode
+    });
+    draft.favorites = draft.favorites.slice(0, 12);
+  }
+  draft.presets = draft.presets || [];
+  draft.presets.unshift({
+    id: uid("iapreset"),
+    at: nowISO(),
+    target: draft.toolTarget,
+    tone: draft.extractedInfo.tone,
+    outputLength: draft.extractedInfo.outputLength,
+    deliveryFormat: draft.extractedInfo.deliveryFormat,
+    mode: draft.generationMode
+  });
+  draft.presets = draft.presets.slice(0, 20);
   draft.updatedAt = nowISO();
   saveIaDraft(draft);
   state.iaDraft = draft;
