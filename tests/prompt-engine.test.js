@@ -24,12 +24,19 @@ function run() {
   assert.ok(draft.promptVariants.technical.includes('VALIDATIONS'));
   assert.ok(draft.promptVariants.alternative.includes('RENFORCEMENT'));
   assert.ok(draft.score.global > 0);
+  assert.ok(draft.score.completeness >= 0);
+  assert.ok(draft.score.executionReadiness >= 0);
   assert.ok(Array.isArray(draft.checklist));
+  assert.ok(Array.isArray(draft.promptVariants.batch));
+  assert.ok(draft.promptVariants.master.includes('RENFORCEMENT'));
 
   const exported = engine.exportModule(draft);
   assert.ok(exported.final !== undefined);
   assert.ok(exported.checklist.includes('- ['));
   assert.ok(exported.summary.includes('Cible détectée'));
+  assert.ok(Array.isArray(exported.examples));
+  assert.ok(Array.isArray(exported.contradictions));
+  assert.ok(typeof exported.faq === 'string');
 
   const weak = engine.detectWeakWords('je veux un prompt pro, complet et intelligent');
   assert.ok(weak.includes('pro'));
@@ -41,6 +48,13 @@ function run() {
   soraDraft.toolTarget = engine.TOOL_TARGETS.SORA;
   engine.composeAllVariants(soraDraft);
   assert.ok(soraDraft.promptVariants.full.includes('MOUVEMENT CAMÉRA'));
+
+
+  const contradictionDraft = engine.createDraft('Je veux un mode prompt simple et ultra pro, sans backend mais API externe obligatoire.');
+  engine.composeAllVariants(contradictionDraft);
+  assert.ok(contradictionDraft.contradictions.length >= 1);
+  const contradictionList = engine.detectContradictions(contradictionDraft);
+  assert.ok(Array.isArray(contradictionList));
 
   const boosted = engine.strengthenPrompt('Base', 'Rendre plus technique', engine.TOOL_TARGETS.CODEX);
   assert.ok(boosted.includes('RENFORCEMENT'));

@@ -11,6 +11,14 @@
     ultra: { questionLimit: 14, depth: "très haute", userTimeMin: 10, enrichment: "maximal" }
   };
 
+  const GENERATION_MODES = {
+    rapide: { label: "mode rapide", primaryVariant: "short", variantCount: 2, refinementLevel: "light" },
+    standard: { label: "mode standard", primaryVariant: "full", variantCount: 3, refinementLevel: "medium" },
+    ultra_pro: { label: "mode ultra pro", primaryVariant: "xl", variantCount: 5, refinementLevel: "high" },
+    simple: { label: "mode prompt simple", primaryVariant: "short", variantCount: 1, refinementLevel: "light" },
+    master: { label: "mode prompt maître", primaryVariant: "technical", variantCount: 6, refinementLevel: "high" }
+  };
+
   const KNOWLEDGE_PACK = {
     promptHeuristics: [
       { key: "objective", label: "objectif clair", weight: 12 },
@@ -472,17 +480,73 @@
     const ambiguityRisk = Math.max(0, 15 - (draft.parsedIntent.ambiguityRisks.length * 3));
     const constraintsRichness = Math.min(15, heur.checks.constraints ? 13 : 6);
     const toolFit = Math.min(15, heur.checks.toolFit ? 13 : 5);
+    const completeness = Math.min(20, heur.checks.constraints && heur.checks.outputFormat ? 18 : 10);
+    const executionReadiness = Math.min(20, heur.checks.actionable && heur.checks.measurable ? 17 : 8);
     return {
       global: heur.global,
       clarity,
       depth,
       context,
       actionable,
+      completeness,
+      executionReadiness,
       ambiguityRisk,
       constraintsRichness,
       toolFit,
       detailed: heur.detailed
     };
+  }
+
+  function detectContradictions(draft) {
+    const text = normalize(`${draft.userRawDescription || ""}\n${draft.finalPrompt || ""}`);
+    const contradictions = [];
+    const matrix = [
+      { a: /sans backend|no backend/, b: /api externe|backend obligatoire/, message: "Conflit backend: 'sans backend' vs besoin d'API/backend." },
+      { a: /ne pas toucher( au)? ui|ui strict/, b: /refonte ui|changer le design/, message: "Conflit UI: verrou UI vs demande de refonte visuelle." },
+      { a: /offline|hors ligne/, b: /dépendance réseau obligatoire|connexion permanente/, message: "Conflit offline: mode hors ligne vs dépendance réseau." },
+      { a: /prompt simple|simple/, b: /ultra pro|détail maximal/, message: "Conflit mode: prompt simple et ultra pro simultanés." }
+    ];
+    matrix.forEach((rule) => {
+      if (rule.a.test(text) && rule.b.test(text)) contradictions.push(rule.message);
+    });
+    return contradictions;
+  }
+
+  function detectGenerationMode(draft) {
+    const src = normalize(`${draft.userRawDescription || ""} ${(draft.depthMode || "")}`);
+    if (/mode\s*rapide|\brapide\b/.test(src)) return "rapide";
+    if (/ultra\s*pro|mode\s*ultra/.test(src)) return "ultra_pro";
+    if (/prompt\s*ma[iî]tre|mode\s*ma[iî]tre/.test(src)) return "master";
+    if (/prompt\s*simple|mode\s*simple/.test(src)) return "simple";
+    return "standard";
+  }
+
+  function autoRefinePrompt(text, draft, mode) {
+    const profile = GENERATION_MODES[mode] || GENERATION_MODES.standard;
+    const suggestions = (draft.suggestions || []).slice(0, 3).map((s) => `- ${s}`);
+    const footer = [
+      "",
+      "[RAFFINAGE AUTO]",
+      `- Profil: ${profile.label}`,
+      "- Détection contradictions exécutée",
+      ...(suggestions.length ? ["- Renforcements recommandés:", ...suggestions] : [])
+    ].join("\n");
+    if (profile.refinementLevel === "light") return sanitizePrompt(text);
+    return sanitizePrompt(`${text}\n${footer}`);
+  }
+
+  function selectInspiringExamples(draft, limit) {
+    const target = draft.toolTarget === TOOL_TARGETS.SORA ? "sora" : "codex";
+    return (KNOWLEDGE_PACK.examples[target] || []).slice(0, limit || 3);
+  }
+
+  function buildFaq(draft) {
+    const contradictions = draft.contradictions || [];
+    return [
+      `Q: Quel mode est actif ?\nR: ${draft.generationModeLabel || "mode standard"}.`,
+      `Q: Contradictions détectées ?\nR: ${contradictions.length ? contradictions.join(" | ") : "Aucune contradiction critique."}`,
+      "Q: Comment renforcer ?\nR: Appliquer les suggestions puis régénérer en mode prompt maître pour la version finale."
+    ].join("\n\n");
   }
 
   function upgradeSuggestions(draft) {
@@ -552,15 +616,37 @@
 
   function composeAllVariants(draft) {
     const target = draft.toolTarget === TOOL_TARGETS.UNKNOWN ? TOOL_TARGETS.CODEX : draft.toolTarget;
+    const generationMode = detectGenerationMode(draft);
+    const modeConfig = GENERATION_MODES[generationMode] || GENERATION_MODES.standard;
+    draft.generationMode = generationMode;
+    draft.generationModeLabel = modeConfig.label;
     draft.promptVariants.short = promptComposer(draft, "short");
     draft.promptVariants.full = promptComposer(draft, "pro");
     draft.promptVariants.xl = promptComposer(draft, "xl");
     draft.promptVariants.technical = promptComposer(draft, "technical");
     draft.promptVariants.alternative = strengthenPrompt(draft.promptVariants.full, target === TOOL_TARGETS.SORA ? "Rendre plus cinématique" : "Rendre plus puissant", target);
+    draft.promptVariants.master = strengthenPrompt(draft.promptVariants.technical, "Rendre plus technique", target);
+    draft.promptVariants.simple = draft.promptVariants.short;
+    draft.promptVariants.batch = [draft.promptVariants.short, draft.promptVariants.full, draft.promptVariants.xl, draft.promptVariants.technical, draft.promptVariants.alternative, draft.promptVariants.master]
+      .slice(0, modeConfig.variantCount);
     draft.projectSummary = buildReasoningSummary(draft);
-    draft.finalPrompt = draft.promptVariants.full;
+    draft.finalPrompt = autoRefinePrompt(draft.promptVariants[modeConfig.primaryVariant] || draft.promptVariants.full, draft, generationMode);
+    draft.contradictions = detectContradictions(draft);
+    draft.examples = selectInspiringExamples(draft, generationMode === "rapide" ? 2 : 4);
     draft.score = qualityScorer(draft);
     draft.checklist = buildChecklist(target, draft);
+    draft.generationHistory = draft.generationHistory || [];
+    draft.generationHistory.unshift({ at: new Date().toISOString(), mode: generationMode, score: draft.score.global, preview: draft.finalPrompt.slice(0, 160) });
+    draft.generationHistory = draft.generationHistory.slice(0, 12);
+    draft.preferencesMemory = {
+      tone: draft.extractedInfo.tone || "professionnel",
+      outputLength: draft.extractedInfo.outputLength || "équilibré",
+      deliveryFormat: draft.extractedInfo.deliveryFormat || "prompt final direct",
+      lastMode: generationMode
+    };
+    draft.favorites = draft.favorites || [];
+    draft.presets = draft.presets || [];
+    draft.faq = buildFaq(draft);
     return draft;
   }
 
@@ -574,8 +660,14 @@
       xl: draft.promptVariants.xl,
       technical: draft.promptVariants.technical,
       alternative: draft.promptVariants.alternative,
+      master: draft.promptVariants.master,
+      simple: draft.promptVariants.simple,
+      batch: draft.promptVariants.batch,
       summary: draft.projectSummary,
-      checklist
+      checklist,
+      faq: draft.faq,
+      contradictions: draft.contradictions,
+      examples: draft.examples
     };
   }
 
@@ -605,12 +697,19 @@
       suggestedQuestions: [],
       suggestedBlocks: [],
       finalPrompt: "",
-      promptVariants: { short: "", full: "", xl: "", technical: "", alternative: "" },
-      outputEngine: { short: "", pro: "", xl: "", technical: "", alternative: "", summary: "", checklist: "" },
+      promptVariants: { short: "", full: "", xl: "", technical: "", alternative: "", master: "", simple: "", batch: [] },
+      outputEngine: { short: "", pro: "", xl: "", technical: "", alternative: "", master: "", simple: "", summary: "", checklist: "", faq: "" },
       score: { global: 0 },
       suggestions: [],
       recommendations: {},
       history: [],
+      generationHistory: [],
+      contradictions: [],
+      examples: [],
+      favorites: [],
+      presets: [],
+      preferencesMemory: {},
+      faq: "",
       tags: []
     };
 
@@ -628,6 +727,7 @@
     TOOL_TARGETS,
     knowledgePack: KNOWLEDGE_PACK,
     questionModes: QUESTION_MODES,
+    generationModes: GENERATION_MODES,
     detectWeakWords,
     expandWeakWords,
     intentClassifier,
@@ -636,6 +736,7 @@
     adaptiveQuestionFlow,
     promptComposer,
     qualityScorer,
+    detectContradictions,
     upgradeSuggestions,
     buildReasoningSummary,
     createDraft,
