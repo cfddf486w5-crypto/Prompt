@@ -249,27 +249,77 @@ function baseSoraBody(title, biome, mood) {
 }
 
 function buildDefaultTemplates() {
-  const codex = Array.from({ length: 25 }).map((_, i) => ({
+  const codexUseCases = [
+    "Audit sécurité et corrections ciblées",
+    "Refactorisation modulaire progressive",
+    "Optimisation des performances UI et JS",
+    "Ajout d'un mode hors-ligne robuste",
+    "Migration de schéma localStorage",
+    "Renforcement de la gestion d'erreurs",
+    "Nettoyage dette technique prioritaire",
+    "Ajout d'un système de permissions",
+    "Automatisation des validations manuelles",
+    "Stabilisation des flux asynchrones",
+    "Consolidation des règles métier",
+    "Patch de régression post-release",
+    "Amélioration de l'accessibilité a11y",
+    "Internationalisation et support i18n",
+    "Journalisation et observabilité locale",
+    "Gestion avancée des états UI",
+    "Sécurisation des entrées utilisateur",
+    "Rationalisation des dépendances internes",
+    "Implémentation d'un mode projet",
+    "Sauvegarde/restauration de configuration",
+    "Fiabilisation de l'import/export JSON",
+    "Qualité et cohérence du code existant",
+    "Préparation d'une livraison incrémentale",
+    "Maintenance corrective multi-plateforme",
+    "Hardening final avant mise en prod"
+  ];
+
+  const codex = codexUseCases.map((useCase, i) => ({
     id: `codex_tpl_${i + 1}`,
-    name: `Codex — Template pro #${i + 1}`,
+    name: `Codex — ${useCase}`,
     tags: ["codex", "pro", "patch"],
     notes: "Template détaillé pour livraison patchée.",
     example: "Ex: ajouter mode projet sans casser l'existant.",
-    body: baseCodexBody(`Cas d'usage #${i + 1}`)
+    body: baseCodexBody(useCase)
   }));
 
   const soraThemes = [
-    "landscape", "romance", "action", "aurora", "fjord", "désert", "forêt", "océan", "lac", "toundra",
-    "city night", "glacier", "pluie", "neige", "golden hour", "fog", "storm", "campfire", "drone", "roadtrip",
-    "falaises", "montagne", "cozy", "cinema", "wildlife"
+    ["Landscape cinématique grand angle", "landscape"],
+    ["Romance intimiste au coucher du soleil", "romance"],
+    ["Action dynamique en mouvement", "action"],
+    ["Aurores boréales contemplatives", "aurora"],
+    ["Fjord épique avec travelling drone", "fjord"],
+    ["Désert dramatique et lumière chaude", "désert"],
+    ["Forêt immersive avec brume légère", "forêt"],
+    ["Océan puissant et horizon ouvert", "océan"],
+    ["Lac calme et ambiance poétique", "lac"],
+    ["Toundra minimaliste et vent froid", "toundra"],
+    ["City night néons et pluie urbaine", "city night"],
+    ["Glacier monumental hyper réaliste", "glacier"],
+    ["Scène sous pluie fine cinématographique", "pluie"],
+    ["Paysage enneigé au rendu premium", "neige"],
+    ["Golden hour lumineux et chaleureux", "golden hour"],
+    ["Brume dense style mystère", "fog"],
+    ["Tempête dramatique haute intensité", "storm"],
+    ["Campfire cozy ambiance nocturne", "campfire"],
+    ["Drone reveal spectaculaire", "drone"],
+    ["Roadtrip émotionnel en tracking", "roadtrip"],
+    ["Falaises vertigineuses et vagues", "falaises"],
+    ["Montagne héroïque panoramique", "montagne"],
+    ["Cozy naturel doux et chaleureux", "cozy"],
+    ["Cinema look premium narratif", "cinema"],
+    ["Wildlife immersif style documentaire", "wildlife"]
   ];
-  const sora = soraThemes.map((theme, i) => ({
+  const sora = soraThemes.map(([label, theme], i) => ({
     id: `sora_tpl_${i + 1}`,
-    name: `Sora — ${theme} master #${i + 1}`,
+    name: `Sora — ${label}`,
     tags: ["sora", "video", theme],
     notes: "Template orienté cohérence et qualité image.",
     example: "Ex: clip 15s 16:9 pour Sora.",
-    body: baseSoraBody(`Scène ${theme}`, theme, i % 2 ? "epic" : "romantic")
+    body: baseSoraBody(label, theme, i % 2 ? "epic" : "romantic")
   }));
 
   return [
