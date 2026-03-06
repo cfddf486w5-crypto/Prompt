@@ -15,5 +15,5 @@ Stockées dans `localStorage` (sur ton appareil). Rien n'est envoyé.
 
 ## Fichiers
 - `index.html`
-- `assets/styles.css`
-- `assets/app.js`
+- `styles.css`
+- `app.js`
