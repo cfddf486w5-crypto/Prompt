@@ -22,6 +22,8 @@ function run() {
   assert.ok(draft.promptVariants.short.includes('RÔLE / MISSION'));
   assert.ok(draft.promptVariants.xl.length > draft.promptVariants.short.length);
   assert.ok(draft.promptVariants.technical.includes('VALIDATIONS'));
+  assert.ok(draft.promptVariants.short.includes('Poser exactement deux questions de clarification'));
+  assert.ok(draft.promptVariants.short.includes('Répondre directement et clairement à chaque question utilisateur'));
   assert.ok(draft.promptVariants.alternative.includes('RENFORCEMENT'));
   assert.ok(draft.score.global > 0);
   assert.ok(draft.score.completeness >= 0);
