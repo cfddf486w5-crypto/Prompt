@@ -316,6 +316,38 @@
     return { field: key || "discussion", question: key ? byField[key] : template[0] };
   }
 
+  function isUserQuestion(text) {
+    const t = normalize(text);
+    return /\?$/.test(String(text || "").trim()) || /^(pourquoi|comment|est-ce que|tu peux|peux-tu|qu(?:e|oi)|which|how|why)\b/.test(t);
+  }
+
+  function answerFromContext(promptState, rawMessage) {
+    const text = normalize(rawMessage);
+    const details = [];
+    if (/outil|codex|sora|gpt/.test(text)) details.push(`outil cible actuel: ${promptState.toolTarget || "à confirmer"}`);
+    if (/plateforme|support|iphone|android|desktop|web/.test(text)) details.push(`plateformes: ${promptState.platform.join(", ") || "à préciser"}`);
+    if (/contraintes|interdit|offline|ui/.test(text)) details.push(`contraintes: ${[...promptState.constraints, ...promptState.mustKeep.map((x) => `garder ${x}`)].join(", ") || "non définies"}`);
+    if (/détail|detail|long|court|ultra/.test(text)) details.push(`niveau de détail: ${promptState.levelOfDetail || "équilibré"}`);
+    if (/sortie|livrable|format|output/.test(text)) details.push(`livrable: ${promptState.outputs || promptState.deliveryFormat || "prompt final + checklist"}`);
+    if (!details.length) details.push(`objectif courant: ${promptState.coreFeatures.join("; ") || "encore flou"}`);
+    return `Oui 👍 Je peux te répondre tout de suite: ${details.join(" · ")}.`;
+  }
+
+  function buildAssistantReply(convo, userMessage) {
+    if (isUserQuestion(userMessage)) {
+      const answer = answerFromContext(convo.structuredPrompt, userMessage);
+      const followup = convo.structuredPrompt.missingFields.length
+        ? `Ensuite, pour progresser, j'ai encore besoin de: ${convo.structuredPrompt.missingFields.slice(0, 2).join(", ")}. ${convo.nextQuestion.question}`
+        : "On est prêts à finaliser. Je peux générer la version courte, détaillée ou ultra.";
+      return `${answer} ${followup}`;
+    }
+
+    if (convo.structuredPrompt.missingFields.length) {
+      return `Je réfléchis à la meilleure version pour toi 🧠. Pour te faire un prompt vraiment solide, il me manque encore ${Math.min(3, convo.structuredPrompt.missingFields.length)} élément(s). ${convo.nextQuestion.question}`;
+    }
+    return "Parfait. Ton brief devient cohérent et actionnable. Je peux maintenant te proposer une réponse finale structurée ou une version ultra technique.";
+  }
+
   function createConversationState(initialText) {
     const structuredPrompt = extractStructuredFields(initialText || "", ensurePromptState());
     structuredPrompt.missingFields = computeMissingFields(structuredPrompt);
@@ -340,10 +372,20 @@
     convo.mode = convo.structuredPrompt.missingFields.length ? "collecte" : "finalisation";
     convo.nextQuestion = nextDynamicQuestion(convo.structuredPrompt);
     convo.suggestions = suggestSmartOptions(convo.structuredPrompt);
-    const assistantText = convo.structuredPrompt.missingFields.length
-      ? `Pour te faire un prompt solide, il me manque surtout ${Math.min(3, convo.structuredPrompt.missingFields.length)} élément(s). ${convo.nextQuestion.question}`
-      : "Super, on a assez d'informations. Je peux générer les versions compacte, détaillée et ultra pro.";
+    const assistantText = buildAssistantReply(convo, userMessage || "");
     convo.messages.push({ role: "assistant", text: assistantText, at: new Date().toISOString() });
+    return convo;
+  }
+
+  function nudgeConversation(conversation) {
+    const convo = conversation || createConversationState("");
+    convo.structuredPrompt.missingFields = computeMissingFields(convo.structuredPrompt);
+    convo.maturity = maturityFromMissing(convo.structuredPrompt.missingFields);
+    convo.nextQuestion = nextDynamicQuestion(convo.structuredPrompt);
+    const nudge = convo.structuredPrompt.missingFields.length
+      ? `Je continue à structurer ton besoin. Mon conseil: réponds d'abord à cette question clé → ${convo.nextQuestion.question}`
+      : "Tout est prêt. Je peux t'aider à comparer les variantes (courte, détaillée, ultra) avant validation.";
+    convo.messages.push({ role: "assistant", text: nudge, at: new Date().toISOString() });
     return convo;
   }
 
@@ -959,6 +1001,7 @@
     strengthenPrompt,
     createConversationState,
     continueConversation,
+    nudgeConversation,
     generateFinalPromptSet,
     reviseConversationPrompt,
     computeMissingFields,

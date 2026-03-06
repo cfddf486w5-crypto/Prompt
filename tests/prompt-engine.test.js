@@ -67,6 +67,14 @@ function run() {
   assert.ok(progressed.messages.length >= 2);
   assert.ok(progressed.structuredPrompt.mustKeep.includes('UI existant'));
 
+
+  const questionTurn = engine.continueConversation(progressed, 'Pourquoi tu proposes ce format ?');
+  const lastQuestionReply = questionTurn.messages[questionTurn.messages.length - 1].text;
+  assert.ok(lastQuestionReply.includes('Je peux te répondre tout de suite'));
+
+  const nudged = engine.nudgeConversation(questionTurn);
+  assert.ok(nudged.messages[nudged.messages.length - 1].text.length > 10);
+
   const finalizedConvo = engine.generateFinalPromptSet(progressed);
   assert.ok(finalizedConvo.finalVariants.short.length > 10);
   assert.ok(finalizedConvo.finalVariants.ultra.includes('NIVEAU DE DÉTAIL'));
